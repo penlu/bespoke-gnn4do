@@ -16,8 +16,24 @@ def add_train_args(parser: ArgumentParser):
 
     :param parser: An ArgumentParser.
     """
+
+    # Dataset arguments
+    parser.add_argument("--dataset", type=str, default="RANDOM", choices=['RANDOM', 'TU'],
+                        help="Dataset to use")
+
+    # Arguments for random graphs
+    parser.add_argument("--num_graphs", type=int, default=10000,
+                        help="When using random graphs, how many to generate?")
+    parser.add_argument("--num_nodes_per_graph", type=int, default=100,
+                        help="When using random graphs, how many nodes per graph?")
+    parser.add_argument("--edge_probability", type=int, default=0.15,
+                        help="When using random dataset, what probability per edge in graph?")
+
+    # Arguments for TU datasets
+    parser.add_argument("--TUdataset_name", type=str, default='PROTEINS',
+                        help="When using TU dataset, which dataset to use?")
+
     # General arguments
-    parser.add_argument("--TUdataset_name", type=str, default="PROTEINS", help="Path to data file")
     parser.add_argument(
         "--problem_type",
         type=str,
@@ -28,7 +44,7 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--seed', type=str, default=0,
                         help='Torch random seed to use to initialize networks')
 
-    # TODO: add relevant arguments.
+    # TODO: add relevant arguments. (penlu: what else?)
 
 def modify_train_args(args: Namespace):
     """
