@@ -3,13 +3,13 @@
 import torch
 import networkx
 import numpy
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import random_split
 from torch_geometric.data import InMemoryDataset
+from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils.convert import from_networkx
 from utils.graph_utils import gen_graph
 
-# TODO check if this works right
 class RandomGraphDataset(InMemoryDataset):
     def __init__(self, root,
                   num_graphs=10000, num_nodes_per_graph=100, edge_probability=0.15,
@@ -69,7 +69,6 @@ def construct_loaders(args):
 
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    # TODO this might need to be a torch_geometric DataLoader
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 

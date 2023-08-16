@@ -1,15 +1,12 @@
 import time
 def train(model, train_loader, optimizer, criterion, args):
-    '''training loop:
+    '''Main training loop:
 
-    Trains a conv with an optimizer for a number of epochs
+    Trains a model with an optimizer for a number of epochs
     
     '''
     epochs = args.epochs
-    start_time = int(time.time())
     model_folder = args.log_dir
-
-    # DELETED: generate a random graph for validation
 
     for ep in range(epochs):
         print('epoch: ', ep)
@@ -17,17 +14,18 @@ def train(model, train_loader, optimizer, criterion, args):
         #building a new project network built on sampling a mixture of products 
         #we will train lift and project together to simplify the process
         #mixture of product abbreviated to mop
+        # TODO data gen should definitely not be in here
         mode = 'mc_lift_project'
         if mode == 'mc_lift_project': 
             A, edge_index, E = gen_weighted_graph(**graph_params)
             obj,x = get_mc_obj(graph_params, conv_lift, conv_project, A, edge_index)
-        elif graph_params.weight==True and graph_params.interpolate != None:
+        elif graph_params.weight == True and graph_params.interpolate != None:
             A, edge_index, E = gen_weighted_graph(**graph_params)
             if lift_net is not None:
                 obj, x = get_warm_start_obj(graph_params, conv, A, edge_index,warm_start=lift_net)
             else:
                 obj, x = get_rounding_obj(graph_params, conv, A, edge_index)
-        elif graph_params.weight==True and graph_params.interpolate==None:
+        elif graph_params.weight == True and graph_params.interpolate == None:
             if lift_net is not None:
                 raise NotImplementedError('warm start requires weight and interpolate parameters')
             A, edge_index, E = gen_weighted_graph(**graph_params)

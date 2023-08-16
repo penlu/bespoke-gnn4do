@@ -1,2 +1,5 @@
 training_runs/*
 *.pyc
+**/.*.swp
+**/.*.swo
+**/__pycache__
