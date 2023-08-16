@@ -3,6 +3,7 @@
 import torch
 import networkx
 import numpy
+from torch.utils.data import DataLoader, random_split
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils.convert import from_networkx
@@ -36,7 +37,7 @@ class RandomGraphDataset(InMemoryDataset):
 
     def process(self):
         # create random undirected graphs and save
-        random_state = numpy.random.RandomState(seed)
+        random_state = numpy.random.RandomState(self.seed)
         data_list = []
         for i in range(self.num_graphs):
             G = networkx.erdos_renyi_graph(self.num_nodes_per_graph, self.edge_probability, seed=random_state)
@@ -51,7 +52,7 @@ class RandomGraphDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-def construct_loader(args):
+def construct_loaders(args):
     if args.dataset == 'RANDOM':
         dataset = RandomGraphDataset(root='/tmp/random',
                     num_graphs=args.num_graphs,
@@ -62,4 +63,14 @@ def construct_loader(args):
     else:
         raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")
 
-    return dataset
+    # TODO make this depend on args for: split, batch size
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+    # TODO this might need to be a torch_geometric DataLoader
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+    return train_loader, val_loader

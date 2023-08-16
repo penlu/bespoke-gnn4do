@@ -1,5 +1,5 @@
-# parse command line
-# create folders and stuff
+# Parse arguments
+
 import math
 import os
 from argparse import ArgumentParser, Namespace
@@ -7,7 +7,6 @@ from argparse import ArgumentParser, Namespace
 import numpy as np
 import torch
 from datetime import datetime
-
 
 # NOTE(JXuKitty): not sure about this yet, still debating the ipynb route
 def add_train_args(parser: ArgumentParser):
@@ -56,9 +55,8 @@ def modify_train_args(args: Namespace):
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
-    # TODO: add real log here
-    args.log_dir = "training_runs/" + datetime.now().strftime("%H:%M:%S")
-
+    # TODO: add real log here (penlu: what mean)
+    args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 def parse_train_args() -> Namespace:
     """
@@ -72,4 +70,3 @@ def parse_train_args() -> Namespace:
     modify_train_args(args)
 
     return args
-
