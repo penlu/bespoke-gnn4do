@@ -21,7 +21,7 @@ def train(args, model, train_loader, optimizer, criterion):
             x_in = F.normalize(x_in, dim=1)
 
             # run model
-            # TODO more robust edge weight system
+            # TODO later, a more robust edge weight system
             num_edges = edge_index.shape[1]
             edge_weights = torch.ones(num_edges)
             x_out = model(x_in, edge_index, edge_weights)

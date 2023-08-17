@@ -48,6 +48,8 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--epochs', type=float, default=10000,
                         help='Training epoch count')
 
+    # TODO need some params for how often to run validation, what validation to run, how often to save
+
     # General arguments
     parser.add_argument( '--problem_type', type=str, default='max_cut',
         choices=['max_cut', 'vertex_cover', 'max_clique'],

@@ -13,7 +13,6 @@ from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_te
 
 import cvxpy as cp
 
-# TODO
 def get_loss_fn(args):
     if args.problem_type == 'max_cut':
         return max_cut_lift_loss
@@ -30,6 +29,7 @@ def max_cut_lift_loss(X, edge_index):
 
     return obj
 
+# TODO use this somewhere probably
 def max_cut_project_loss(X, edge_index):
     #apply random rotation 
     #with supervision of lifted loss rotation should not be necessary
