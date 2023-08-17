@@ -9,20 +9,47 @@ import time
 
 import torch
 import torch.nn.functional as F
-from torch_geometric.utils import dense_to_sparse
+from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_tensor
 
 import cvxpy as cp
 
 # TODO
 def get_loss_fn(args):
     if args.problem_type == 'max_cut':
-        return objective_lift_mc
+        return max_cut_lift_loss
     elif args.problem_type == 'vertex_cover':
         raise NotImplementedError('vertex_cover loss not yet implemented')
     elif args.problem_type == 'max_clique':
         raise NotImplementedError('max_clique loss not yet implemented')
 
-def max_cut_lift_loss(
+def max_cut_lift_loss(X, edge_index):
+    # compute lifted loss
+    A = to_torch_csr_tensor(edge_index)
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    obj = torch.trace(torch.matmul(A, XX)) / 2.
+
+    return obj
+
+def max_cut_project_loss(X, edge_index):
+    #apply random rotation 
+    #with supervision of lifted loss rotation should not be necessary
+    #without lifted loss, rotation enforces rotational symmetry of lift net output
+    #this is critical as project net must have an enumerative search component
+    #manifested by repeated random rotations.  
+
+    #pass through project net 
+    x_project = conv_project(x_lift,edge_index,edge_weights) 
+
+    #compute projected loss  
+    xx_project = torch.matmul(x_project, torch.transpose(x_project, 0, 1))
+    project = torch.trace(torch.matmul(A, xx_project)) / (2.*graph_params.r)
+    print('lifted loss: ', lift)
+    print('projected loss: ', project)
+
+    #interpolate represents the relative weight of the lifted vs projected loss
+    #default setting 0.5
+    obj = (1-interpolate)*project + interpolate*lift
+    return obj, x_project
 
 #loss functions of max cut
 def objective_lift_mc(graph_params, conv_mc, A, edge_index, warm_start=None, interpolate=0.5, mode=None):
