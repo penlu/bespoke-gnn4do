@@ -25,7 +25,7 @@ def add_train_args(parser: ArgumentParser):
                         help='When using random graphs, how many to generate?')
     parser.add_argument('--num_nodes_per_graph', type=int, default=100,
                         help='When using random graphs, how many nodes per graph?')
-    parser.add_argument('--edge_probability', type=int, default=0.15,
+    parser.add_argument('--edge_probability', type=float, default=0.15,
                         help='When using random dataset, what probability per edge in graph?')
 
     # Arguments for TU datasets
@@ -45,8 +45,12 @@ def add_train_args(parser: ArgumentParser):
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate')
-    parser.add_argument('--epochs', type=float, default=10000,
+    parser.add_argument('--epochs', type=float, default=100,
                         help='Training epoch count')
+    parser.add_argument('--valid_epochs', type=int, default=1,
+                        help='Run validation every N epochs (0 to never run validation)')
+    parser.add_argument('--save_epochs', type=int, default=0,
+                        help='Save model every N epochs (0 to only save at end of training)')
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
 

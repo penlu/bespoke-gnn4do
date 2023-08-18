@@ -10,20 +10,22 @@ def train(args, model, train_loader, optimizer, criterion):
     epochs = args.epochs
     model_folder = args.log_dir
 
+    model.to(args.device)
     for ep in range(epochs):
-        print('epoch: ', ep)
+        start_time = time.time()
+        total_obj = 0.
         for batch in train_loader:
             N = batch.num_nodes
-            edge_index = batch.edge_index
+            edge_index = batch.edge_index.to(args.device)
 
             # generate random vector input
-            x_in = torch.randn((N, args.rank), dtype=torch.float)
+            x_in = torch.randn((N, args.rank), device=args.device)
             x_in = F.normalize(x_in, dim=1)
 
             # run model
             # TODO later, a more robust edge weight system
             num_edges = edge_index.shape[1]
-            edge_weights = torch.ones(num_edges)
+            edge_weights = torch.ones(num_edges, device=args.device)
             x_out = model(x_in, edge_index, edge_weights)
 
             # get objective
@@ -33,10 +35,20 @@ def train(args, model, train_loader, optimizer, criterion):
             obj.backward()
             optimizer.step()
 
-            # TODO occasionally run validation and print loss
-            #if ep % 2000 == 0:
-            #    torch.save(conv_mc['lift'].state_dict(), f"{model_folder}/lift_ep{epochs}.pt")
-            #    torch.save(conv_mc['project'].state_dict(), f"{model_folder}/project_ep{epochs}.pt")
+            total_obj += obj.cpu().detach().numpy()
+
+        epoch_time = time.time() - start_time
+        print(f"epoch {ep} t={epoch_time} total_obj={total_obj}")
+
+        # TODO occasionally run validation and print loss
+        if args.valid_epochs != 0 and ep % args.valid_epochs == 0:
+            pass
+
+        if args.save_epochs != 0 and ep % args.save_epochs == 0:
+            torch.save(model.state_dict(), f"{model_folder}/model_ep{ep}.pt")
+
+    # save trained model
+    torch.save(model.state_dict(), f"{model_folder}/model_ep{epochs}.pt")
 
 def test():
     pass

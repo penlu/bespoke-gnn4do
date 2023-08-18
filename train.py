@@ -13,6 +13,10 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     os.makedirs(args.log_dir, exist_ok=True)
 
+    # save params
+    args.device = str(args.device)
+    json.dump(vars(args), open(os.path.join(args.log_dir, 'params.txt'), 'w'))
+
     # get data, model
     train_loader, val_loader = construct_loaders(args)
     model, optimizer = construct_model(args)
@@ -20,7 +24,3 @@ if __name__ == '__main__':
 
     # train model
     train(args, model, train_loader, optimizer, criterion)
-
-    # save params
-    args.device = str(args.device)
-    json.dump(vars(args), open(os.path.join(args.log_dir, 'params.txt'), 'w'))
