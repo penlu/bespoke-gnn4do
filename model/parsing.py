@@ -8,14 +8,8 @@ import numpy as np
 import torch
 from datetime import datetime
 
-# NOTE(JXuKitty): not sure about this yet, still debating the ipynb route
-def add_train_args(parser: ArgumentParser):
-    """
-    Adds training arguments to an ArgumentParser.
 
-    :param parser: An ArgumentParser.
-    """
-
+def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
     parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU'],
                         help='Dataset to use')
@@ -32,6 +26,12 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--TUdataset_name', type=str, default=None,
                         help='When using TU dataset, which dataset to use?')
 
+def add_train_args(parser: ArgumentParser):
+    """
+    Adds training arguments to an ArgumentParser.
+
+    :param parser: An ArgumentParser.
+    """
     # Model construction arguments
     parser.add_argument('--model_type', type=str, default='MP', choices=['MP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
                         help='Which type of model to use')
@@ -85,7 +85,17 @@ def parse_train_args() -> Namespace:
     """
     parser = ArgumentParser()
     add_train_args(parser)
+    add_dataset_args(parser)
     args = parser.parse_args()
     modify_train_args(args)
 
     return args
+
+def parse_test_args() -> Namespace:
+    parser = ArgumentParser
+    parser.add_argument('--model_folder', type=str, default=None,
+                        help='folder to look in.')
+    parser.add_argument('--model_file', type=str, default=None,
+                        help='model file')
+    add_dataset_args(parser)
+    return parser.parse_args()
