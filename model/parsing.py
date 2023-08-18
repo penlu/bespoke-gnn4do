@@ -8,7 +8,6 @@ import numpy as np
 import torch
 from datetime import datetime
 
-
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
     parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU'],
@@ -32,11 +31,23 @@ def add_train_args(parser: ArgumentParser):
 
     :param parser: An ArgumentParser.
     """
+    # General arguments
+    parser.add_argument('--problem_type', type=str, default='max_cut',
+        choices=['max_cut', 'vertex_cover', 'max_clique'],
+        help='What problem are we doing?',
+    )
+    parser.add_argument('--seed', type=str, default=0,
+                        help='Torch random seed to use to initialize networks')
+    parser.add_argument('--prefix', type=str, default="",
+                        help='Folder name prefix')
+
     # Model construction arguments
-    parser.add_argument('--model_type', type=str, default='MP', choices=['MP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
+    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
+    parser.add_argument('--num_layers_project', type=int, default=2,
+                        help='How many projection layers? (when using FullMP)')
     parser.add_argument('--rank', type=int, default=2,
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
     parser.add_argument('--dropout', type=float, default=0.1,
@@ -54,16 +65,6 @@ def add_train_args(parser: ArgumentParser):
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
 
-    # General arguments
-    parser.add_argument( '--problem_type', type=str, default='max_cut',
-        choices=['max_cut', 'vertex_cover', 'max_clique'],
-        help='What problem are we doing?',
-    )
-    parser.add_argument('--seed', type=str, default=0,
-                        help='Torch random seed to use to initialize networks')
-
-    # TODO: add relevant arguments. (penlu: what else?)
-
 def modify_train_args(args: Namespace):
     """
     Modifies and validates training arguments in place.
@@ -74,8 +75,9 @@ def modify_train_args(args: Namespace):
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
+    # TODO add real logger functionality
     # TODO: decide what to name the log dir.
-    args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    args.log_dir = "training_runs/" + args.prefix + '_' + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 def parse_train_args() -> Namespace:
     """

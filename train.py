@@ -19,7 +19,7 @@ if __name__ == '__main__':
     criterion = get_loss_fn(args)
 
     # train model
-    train(args, model, train_loader, optimizer, criterion)
+    train(args, model, train_loader, val_loader, optimizer, criterion)
     
     # save params (presence of params.txt functions as flag for successful run)
     args.device = str(args.device)

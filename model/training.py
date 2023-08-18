@@ -18,7 +18,7 @@ def featurize_batch(args, batch):
     return x_in, edge_index, edge_weights 
 
 
-def train(args, model, train_loader, optimizer, criterion):
+def train(args, model, train_loader, val_loader, optimizer, criterion):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
