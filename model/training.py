@@ -58,11 +58,11 @@ def train(args, model, train_loader, optimizer, criterion):
 
 def predict(model, loader, args):
     batches = []
+    # TODO decide return signature and transform.
     for batch in loader:
         x_in, edge_index, edge_weights = featurize_batch(args, batch)
         x_out = model(x_in, edge_index, edge_weights)
         batches.append((x_out, edge_index))
-
     return batches
 
 # these three functions
