@@ -2,7 +2,7 @@ import time
 import torch
 import torch.nn.functional as F
 
-def train(args, model, train_loader, optimizer, criterion):
+def train(args, model, train_loader, val_loader, optimizer, criterion):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
@@ -26,7 +26,7 @@ def train(args, model, train_loader, optimizer, criterion):
             # TODO later, a more robust edge weight system
             num_edges = edge_index.shape[1]
             edge_weights = torch.ones(num_edges, device=args.device)
-            x_out = model(x_in, edge_index, edge_weights)
+            x_out = model(x_in, edge_index, edge_weights=edge_weights)
 
             # get objective
             obj = criterion(x_out, edge_index)
