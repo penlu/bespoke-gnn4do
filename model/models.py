@@ -43,7 +43,7 @@ def construct_model(args):
 
 # This network concatenates the neighborhood gradient to each vector in its input.
 class MaxCutGradLayer(MessagePassing):
-    def __init__(self, in_channels):
+    def __init__(self):
         super().__init__(aggr='add')
 
     def forward(self, x, edge_index, edge_weights):
@@ -52,21 +52,35 @@ class MaxCutGradLayer(MessagePassing):
     def message(self, x_j, edge_weights):
         return x_j * edge_weights[:, None]
 
-    def update(self, aggr_out, x):
-        norm_aggr = F.normalize(aggr_out, dim=1) # why?
+    def update(self, aggr_out, x, edge_weights):
+        norm_aggr = F.normalize(aggr_out, dim=1)
         return norm_aggr
 
 class MaxCutLiftLayer(torch.nn.Module):
     def __init__(self, in_channels):
         super().__init__()
+        self.grad_layer = MaxCutGradLayer()
         self.lin = Linear(2*in_channels, in_channels)
-        self.grad_layer = MaxCutGradLayer(in_channels)
 
     def forward(self, x, edge_index, edge_weights):
         grads = self.grad_layer(x, edge_index, edge_weights)
-        concat = torch.cat((x, grads), 1)
-        out = self.lin(concat)
+        out = torch.cat((x, grads), 1)
+        out = self.lin(out)
         out = F.normalize(out, dim=1)
+        return out
+
+# Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
+class MaxCutProjectLayer(torch.nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.grad_layer = MaxCutGradLayer()
+        self.lin = Linear(2*in_channels, in_channels)
+
+    def forward(self, x, edge_index, edge_weights):
+        grads = self.grad_layer(x, edge_index, edge_weights)
+        out = torch.cat((x, grads), 1)
+        out = self.lin(out)
+        out = torch.tanh(out)
         return out
 
 class MaxCutLiftNetwork(torch.nn.Module):
@@ -80,20 +94,6 @@ class MaxCutLiftNetwork(torch.nn.Module):
         for l in self.layers:
             x = l(x, edge_index, edge_weights)
         return x
-
-# Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
-class MaxCutProjectLayer(torch.nn.Module):
-    def __init__(self, in_channels):
-        super().__init__()
-        self.lin = Linear(2*in_channels, in_channels)
-        self.grad_layer = MaxCutGradLayer(in_channels)
-
-    def forward(self, x, edge_index, edge_weights):
-        grads = self.grad_layer(x, edge_index, edge_weights)
-        concat = torch.cat((x, grads), 1)
-        out = self.lin(concat)
-        out = torch.tanh(out)
-        return out
 
 class MaxCutProjectNetwork(torch.nn.Module):
     def __init__(self, in_channels, num_layers=8):
@@ -110,16 +110,16 @@ class MaxCutProjectNetwork(torch.nn.Module):
 class MaxCutLiftProjectNetwork(torch.nn.Module):
     def __init__(self, in_channels, num_layers_lift, num_layers_project):
         super().__init__()
-        self.lift = MaxCutLiftNetwork(in_channels, num_layers=num_layers_lift)
-        self.project = MaxCutProjectNetwork(in_channels, num_layers=num_layers_project)
+        self.lift_net = MaxCutLiftNetwork(in_channels, num_layers=num_layers_lift)
+        self.project_net = MaxCutProjectNetwork(in_channels, num_layers=num_layers_project)
 
     def forward(self, x, edge_index, edge_weights):
-        lifted = self.lift(x, edge_index, edge_weights)
+        out = self.lift_net(x, edge_index, edge_weights)
 
-        # TODO randomly rotate here?
+        # TODO randomly rotate here
 
-        projected = self.project(lifted, edge_index, edge_weights)
-        return projected
+        out = self.project_net(out, edge_index, edge_weights)
+        return out
 
 # TODO graph isomorphism network
 

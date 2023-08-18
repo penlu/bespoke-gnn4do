@@ -43,7 +43,7 @@ def add_train_args(parser: ArgumentParser):
                         help='When using TU dataset, which dataset to use?')
 
     # Model construction arguments
-    parser.add_argument('--model_type', type=str, default='MP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
+    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=16,
                         help='How many layers?')
