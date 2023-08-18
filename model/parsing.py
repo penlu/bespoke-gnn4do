@@ -45,9 +45,9 @@ def add_train_args(parser: ArgumentParser):
     # Model construction arguments
     parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
                         help='Which type of model to use')
-    parser.add_argument('--num_layers', type=int, default=16,
+    parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
-    parser.add_argument('--num_layers_project', type=int, default=8,
+    parser.add_argument('--num_layers_project', type=int, default=2,
                         help='How many projection layers? (when using FullMP)')
     parser.add_argument('--rank', type=int, default=2,
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
