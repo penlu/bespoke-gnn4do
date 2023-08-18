@@ -2,6 +2,21 @@ import time
 import torch
 import torch.nn.functional as F
 
+def featurize_batch(args, batch):
+    N = batch.num_nodes
+    edge_index = batch.edge_index.to(args.device)
+
+    # generate random vector input
+    x_in = torch.randn((N, args.rank), device=args.device)
+    x_in = F.normalize(x_in, dim=1)
+
+    # run model
+    # TODO later, a more robust edge weight system
+    num_edges = edge_index.shape[1]
+    edge_weights = torch.ones(num_edges, device=args.device)
+    return x_in, edge_index, edge_weights 
+
+
 def train(args, model, train_loader, optimizer, criterion):
     '''Main training loop:
 
@@ -15,17 +30,7 @@ def train(args, model, train_loader, optimizer, criterion):
         start_time = time.time()
         total_obj = 0.
         for batch in train_loader:
-            N = batch.num_nodes
-            edge_index = batch.edge_index.to(args.device)
-
-            # generate random vector input
-            x_in = torch.randn((N, args.rank), device=args.device)
-            x_in = F.normalize(x_in, dim=1)
-
-            # run model
-            # TODO later, a more robust edge weight system
-            num_edges = edge_index.shape[1]
-            edge_weights = torch.ones(num_edges, device=args.device)
+            x_in, edge_index, edge_weights = featurize_batch(args, batch)
             x_out = model(x_in, edge_index, edge_weights)
 
             # get objective
@@ -38,7 +43,7 @@ def train(args, model, train_loader, optimizer, criterion):
             total_obj += obj.cpu().detach().numpy()
 
         epoch_time = time.time() - start_time
-        print(f"epoch {ep} t={epoch_time} total_obj={total_obj}")
+        print(f"epoch {ep} t={epoch_time} total_obj={total_obj:0.2f}")
 
         # TODO occasionally run validation and print loss
         if args.valid_epochs != 0 and ep % args.valid_epochs == 0:
@@ -48,13 +53,17 @@ def train(args, model, train_loader, optimizer, criterion):
             torch.save(model.state_dict(), f"{model_folder}/model_ep{ep}.pt")
 
     # save trained model
+    # TODO save best model, not just a bunch of epochs.
     torch.save(model.state_dict(), f"{model_folder}/model_ep{epochs}.pt")
 
-def test():
-    pass
+def predict(model, loader, args):
+    batches = []
+    for batch in loader:
+        x_in, edge_index, edge_weights = featurize_batch(args, batch)
+        x_out = model(x_in, edge_index, edge_weights)
+        batches.append((x_out, edge_index))
 
-def predict():
-    pass
+    return batches
 
 # these three functions
 # plus possibly wrangling model output

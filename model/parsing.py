@@ -29,7 +29,7 @@ def add_train_args(parser: ArgumentParser):
                         help='When using random dataset, what probability per edge in graph?')
 
     # Arguments for TU datasets
-    parser.add_argument('--TUdataset_name', type=str, default='PROTEINS',
+    parser.add_argument('--TUdataset_name', type=str, default=None,
                         help='When using TU dataset, which dataset to use?')
 
     # Model construction arguments
@@ -49,7 +49,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Training epoch count')
     parser.add_argument('--valid_epochs', type=int, default=1,
                         help='Run validation every N epochs (0 to never run validation)')
-    parser.add_argument('--save_epochs', type=int, default=0,
+    parser.add_argument('--save_epochs', type=int, default=10,
                         help='Save model every N epochs (0 to only save at end of training)')
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
@@ -74,7 +74,7 @@ def modify_train_args(args: Namespace):
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
-    # TODO: add real log here (penlu: what mean)
+    # TODO: decide what to name the log dir.
     args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 def parse_train_args() -> Namespace:
