@@ -1,6 +1,7 @@
 import time
 import torch
 import torch.nn.functional as F
+from model.saving import save_model
 
 def featurize_batch(args, batch):
     N = batch.num_nodes
@@ -50,11 +51,11 @@ def train(args, model, train_loader, optimizer, criterion):
             pass
 
         if args.save_epochs != 0 and ep % args.save_epochs == 0:
-            torch.save(model.state_dict(), f"{model_folder}/model_ep{ep}.pt")
+            save_model(model,f"{model_folder}/model_ep{ep}.pt")
 
     # save trained model
     # TODO save best model, not just a bunch of epochs.
-    torch.save(model.state_dict(), f"{model_folder}/model_ep{epochs}.pt")
+    save_model(model, f"{model_folder}/model_ep{epochs}.pt")
 
 def predict(model, loader, args):
     batches = []

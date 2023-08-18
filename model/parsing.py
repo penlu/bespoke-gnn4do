@@ -45,7 +45,7 @@ def add_train_args(parser: ArgumentParser):
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate')
-    parser.add_argument('--epochs', type=float, default=100,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='Training epoch count')
     parser.add_argument('--valid_epochs', type=int, default=1,
                         help='Run validation every N epochs (0 to never run validation)')
