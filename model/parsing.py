@@ -46,9 +46,9 @@ def add_train_args(parser: ArgumentParser):
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
-    parser.add_argument('--num_layers_project', type=int, default=2,
+    parser.add_argument('--num_layers_project', type=int, default=4,
                         help='How many projection layers? (when using FullMP)')
-    parser.add_argument('--rank', type=int, default=2,
+    parser.add_argument('--rank', type=int, default=32,
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
     parser.add_argument('--dropout', type=float, default=0.1,
                         help='Model dropout')
@@ -62,6 +62,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Run validation every N epochs (0 to never run validation)')
     parser.add_argument('--save_epochs', type=int, default=10,
                         help='Save model every N epochs (0 to only save at end of training)')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='Batch size for training')
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
 

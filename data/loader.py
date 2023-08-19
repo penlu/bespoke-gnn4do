@@ -64,12 +64,13 @@ def construct_loaders(args):
         raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")
 
     # TODO make this depend on args for: split, batch size
+    print("dataset size:", len(dataset))
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
 
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     return train_loader, val_loader
