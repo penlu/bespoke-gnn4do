@@ -15,7 +15,7 @@ def add_dataset_args(parser: ArgumentParser):
                         help='Dataset to use')
 
     # Arguments for random graphs
-    parser.add_argument('--num_graphs', type=int, default=10000,
+    parser.add_argument('--num_graphs', type=int, default=1000,
                         help='When using random graphs, how many to generate?')
     parser.add_argument('--num_nodes_per_graph', type=int, default=100,
                         help='When using random graphs, how many nodes per graph?')
@@ -59,7 +59,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Learning rate')
     parser.add_argument('--epochs', type=int, default=100,
                         help='Training epoch count')
-    parser.add_argument('--valid_epochs', type=int, default=1,
+    parser.add_argument('--valid_epochs', type=int, default=0,
                         help='Run validation every N epochs (0 to never run validation)')
     parser.add_argument('--save_epochs', type=int, default=10,
                         help='Save model every N epochs (0 to only save at end of training)')

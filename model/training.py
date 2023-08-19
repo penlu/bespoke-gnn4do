@@ -52,7 +52,7 @@ def validation(args, model, val_loader, baseline, projector, score):
         score_base = score(x_base, edge_index, edge_weights)
         score_model = score(x_model, edge_index, edge_weights)
 
-def train(args, model, train_loader, optimizer, criterion):
+def train(args, model, train_loader, optimizer, criterion, val_loader = None):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
