@@ -53,6 +53,12 @@ def add_train_args(parser: ArgumentParser):
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
     parser.add_argument('--dropout', type=float, default=0.1,
                         help='Model dropout')
+    parser.add_argument('--hidden_channels', type=int, default=32,
+                        help='Dimensions of the hidden channels')
+    parser.add_argument('--norm', type=str, default="BatchNorm",
+                        help='Normalization to use')
+    parser.add_argument('--heads', type=int, default=5,
+                        help='number of heads for GAT')
 
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,
