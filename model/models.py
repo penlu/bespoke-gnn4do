@@ -53,8 +53,7 @@ class MaxCutGradLayer(MessagePassing):
         return x_j * edge_weights[:, None]
 
     def update(self, aggr_out, x, edge_weights):
-        norm_aggr = F.normalize(aggr_out, dim=1)
-        return norm_aggr
+        return aggr_out
 
 class MaxCutLiftLayer(torch.nn.Module):
     def __init__(self, in_channels):
@@ -64,23 +63,10 @@ class MaxCutLiftLayer(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weights):
         grads = self.grad_layer(x, edge_index, edge_weights)
-        out = torch.cat((x, grads), 1)
+        norm_grads = F.normalize(grads, dim=1)
+        out = torch.cat((x, norm_grads), 1)
         out = self.lin(out)
         out = F.normalize(out, dim=1)
-        return out
-
-# Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
-class MaxCutProjectLayer(torch.nn.Module):
-    def __init__(self, in_channels):
-        super().__init__()
-        self.grad_layer = MaxCutGradLayer()
-        self.lin = Linear(2*in_channels, in_channels)
-
-    def forward(self, x, edge_index, edge_weights):
-        grads = self.grad_layer(x, edge_index, edge_weights)
-        out = torch.cat((x, grads), 1)
-        out = self.lin(out)
-        out = torch.tanh(out)
         return out
 
 class MaxCutLiftNetwork(torch.nn.Module):
@@ -94,6 +80,20 @@ class MaxCutLiftNetwork(torch.nn.Module):
         for l in self.layers:
             x = l(x, edge_index, edge_weights)
         return x
+
+# Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
+class MaxCutProjectLayer(torch.nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.grad_layer = MaxCutGradLayer()
+        self.lin = Linear(2*in_channels, in_channels)
+
+    def forward(self, x, edge_index, edge_weights):
+        grads = self.grad_layer(x, edge_index, edge_weights)
+        out = torch.cat((x, grads), 1)
+        out = self.lin(out)
+        out = F.tanh(out)
+        return out
 
 class MaxCutProjectNetwork(torch.nn.Module):
     def __init__(self, in_channels, num_layers=8):
@@ -115,9 +115,7 @@ class MaxCutLiftProjectNetwork(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weights):
         out = self.lift_net(x, edge_index, edge_weights)
-
         # TODO randomly rotate here
-
         out = self.project_net(out, edge_index, edge_weights)
         return out
 
