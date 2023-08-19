@@ -7,6 +7,7 @@ from argparse import ArgumentParser, Namespace
 import numpy as np
 import torch
 from datetime import datetime
+import json
 
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
@@ -94,10 +95,25 @@ def parse_train_args() -> Namespace:
     return args
 
 def parse_test_args() -> Namespace:
-    parser = ArgumentParser
+    parser = ArgumentParser()
     parser.add_argument('--model_folder', type=str, default=None,
                         help='folder to look in.')
     parser.add_argument('--model_file', type=str, default=None,
                         help='model file')
     add_dataset_args(parser)
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # read params from model folder.
+    with open(os.path.join(args.model_folder, 'params.txt'), 'r') as f:
+        model_args = json.load(f)
+
+    # set device
+    model_args[ "device"] =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # get relevant keys
+    argkeys = vars(args).keys()
+    for k, v in model_args.items():
+        if k not in argkeys:
+            setattr(args, k, v)
+
+    return args
