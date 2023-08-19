@@ -10,9 +10,8 @@ from torch.nn import Linear, Parameter, Sequential
 from torch.optim import Adam
 
 from torch_geometric.nn import MessagePassing
-from torch_geometric.nn.models import GAT, GIN, GCN, GatedGraphConv
-from torch_geometric.nn.conv import GATv2Conv
-from torch_geometric.nn.models.basic_gnn import BasicGNN
+from torch_geometric.nn.models import GAT, GIN, GCN
+from torch_geometric.nn.conv import GatedGraphConv
 
 def construct_model(args):
     if args.problem_type == 'max_cut' and args.model_type == 'LiftMP':
@@ -47,7 +46,9 @@ def construct_model(args):
                     norm=args.norm,
                     num_layers=args.num_layers)
     elif args.model_type == 'GatedGCNN':
-        raise NotImplementedError('GatedGCNN not yet implemented')
+        # TODO - does this need more params? is out_channel correct?
+        return GatedGraphConv(out_channels=args.hidden_layers,
+                    num_layers=args.num_layers)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
