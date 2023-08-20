@@ -60,7 +60,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Dimensions of the hidden channels')
     parser.add_argument('--norm', type=str, default="BatchNorm",
                         help='Normalization to use')
-    parser.add_argument('--heads', type=int, default=5,
+    parser.add_argument('--heads', type=int, default=4,
                         help='number of heads for GAT')
 
     # Training parameters
@@ -80,7 +80,7 @@ def add_train_args(parser: ArgumentParser):
 def hash_dict(d):
     # Convert the dictionary to a sorted tuple of key-value pairs
     sorted_items = str(tuple(sorted(d.items())))
-    print(sorted_items)
+    #print(sorted_items)
     
     # Hash the tuple
     hash_value = hashlib.sha256(sorted_items.encode()).hexdigest()
@@ -99,7 +99,7 @@ def modify_train_args(args: Namespace):
         args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     else:
         hashed_params = hash_dict(vars(args))
-        print(hashed_params)
+        #print(hashed_params)
         args.log_dir = "training_runs/" + args.prefix + f"_paramhash:{hashed_params}"
     
     print("device", torch.cuda.is_available())
