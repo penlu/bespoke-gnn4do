@@ -76,10 +76,10 @@ def construct_loaders(args, mode=None):
 
     if mode == "test":
         # the whole dataset is your loader.
-        test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+        test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
         return test_loader
     elif mode is None:
-        # TODO make this depend on args for: split, batch size
+        # TODO make this depend on args for split size
         print("dataset size:", len(dataset))
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size

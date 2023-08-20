@@ -9,10 +9,21 @@ import torch
 from datetime import datetime
 import json
 
+def add_general_args(parser: ArgumentParser):
+    # General arguments
+    parser.add_argument('--problem_type', type=str, default='max_cut',
+        choices=['max_cut', 'vertex_cover', 'max_clique'],
+        help='What problem are we doing?',
+    )
+    parser.add_argument('--seed', type=str, default=0,
+                        help='Torch random seed to use to initialize networks')
+    parser.add_argument('--prefix', type=str,
+                        help='Folder name for run outputs if desired (will default to run timestamp)')
+
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
     parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU'],
-                        help='Dataset to use')
+                        help='Dataset type to use')
 
     # Arguments for random graphs
     parser.add_argument('--num_graphs', type=int, default=1000,
@@ -20,7 +31,7 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--num_nodes_per_graph', type=int, default=100,
                         help='When using random graphs, how many nodes per graph?')
     parser.add_argument('--edge_probability', type=float, default=0.15,
-                        help='When using random dataset, what probability per edge in graph?')
+                        help='When using random graphs, what probability per edge in graph?')
 
     # Arguments for TU datasets
     parser.add_argument('--TUdataset_name', type=str, default=None,
@@ -32,16 +43,6 @@ def add_train_args(parser: ArgumentParser):
 
     :param parser: An ArgumentParser.
     """
-    # General arguments
-    parser.add_argument('--problem_type', type=str, default='max_cut',
-        choices=['max_cut', 'vertex_cover', 'max_clique'],
-        help='What problem are we doing?',
-    )
-    parser.add_argument('--seed', type=str, default=0,
-                        help='Torch random seed to use to initialize networks')
-    parser.add_argument('--prefix', type=str, default="",
-                        help='Folder name prefix')
-
     # Model construction arguments
     parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
                         help='Which type of model to use')
@@ -86,7 +87,10 @@ def modify_train_args(args: Namespace):
     )
     # TODO add real logger functionality
     # TODO: decide what to name the log dir.
-    args.log_dir = "training_runs/" + args.prefix + '_' + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    if args.prefix is None:
+        args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    else:
+        args.log_dir = args.prefix
 
 def parse_train_args() -> Namespace:
     """
@@ -95,6 +99,7 @@ def parse_train_args() -> Namespace:
     :return: A Namespace containing the parsed, modified, and validated args.
     """
     parser = ArgumentParser()
+    add_general_args(parser)
     add_train_args(parser)
     add_dataset_args(parser)
     args = parser.parse_args()
@@ -108,6 +113,7 @@ def parse_test_args() -> Namespace:
                         help='folder to look in.')
     parser.add_argument('--model_file', type=str, default=None,
                         help='model file')
+    add_general_args(parser)
     add_dataset_args(parser)
     args = parser.parse_args()
 
@@ -132,36 +138,27 @@ def modify_baseline_args(args: Namespace):
 
     :param args: Arguments.
     """
-    print("device", torch.cuda.is_available())
+    print("Is GPU available?", torch.cuda.is_available())
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
     # TODO add real logger functionality
     # TODO: decide what to name the log dir.
-    args.log_dir = "baseline_runs/" + args.prefix + '_' + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    if args.prefix is None:
+        args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    else:
+        args.log_dir = args.prefix
     args.batch_size = 1
 
 def parse_baseline_args() -> Namespace:
     parser = ArgumentParser()
-    parser.add_argument('--problem_type', type=str, default='max_cut',
-        choices=['max_cut', 'vertex_cover', 'max_clique'],
-        help='What problem are we doing?',
-    )
-    parser.add_argument('--seed', type=str, default=0,
-                        help='Torch random seed to use to initialize networks')
-    parser.add_argument('--prefix', type=str, default="",
-                        help='Folder name prefix')
+    add_general_args(parser)
+    add_dataset_args(parser)
     parser.add_argument('--rank', type=int, default=32,
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
 
-    parser.add_argument('--projector', type=str, default='e1',
-        choices=['e1', 'random_hyperplane'],
-        help='How to project solution to integers.',
-    )
+    # TODO argument to control list of baselines to run?
 
-    # TODO argument to control list of baselines to run
-
-    add_dataset_args(parser)
     args = parser.parse_args()
     modify_baseline_args(args)
     return args

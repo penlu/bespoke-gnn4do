@@ -210,8 +210,8 @@ if __name__ == '__main__':
                 'index': i,
                 'method': lift_name,
                 'type': 'lift',
-                'score': lift_score,
-                'penalty': lift_penalty,
+                'score': float(lift_score),
+                'penalty': float(lift_penalty),
                 'x': x_lift.tolist(),
             }
             outfile.write(json.dumps(res) + '\n')
@@ -226,8 +226,8 @@ if __name__ == '__main__':
                     'index': i,
                     'method': f"{lift_name}|{project_name}",
                     'type': 'lift_project',
-                    'score': project_score,
-                    'penalty': project_penalty,
+                    'score': float(project_score),
+                    'penalty': float(project_penalty),
                     'x': x_project.tolist(),
                 }
                 outfile.write(json.dumps(res) + '\n')
@@ -251,8 +251,8 @@ if __name__ == '__main__':
             'index': i,
             'method': 'gurobi',
             'type': 'solver',
-            'score': gurobi_score,
-            'penalty': gurobi_penalty,
+            'score': float(gurobi_score),
+            'penalty': float(gurobi_penalty),
             'x': x_gurobi.tolist(),
         }
         outfile.write(json.dumps(res) + '\n')
