@@ -8,6 +8,8 @@ import numpy as np
 import torch
 from datetime import datetime
 import json
+import hashlib
+
 
 def add_general_args(parser: ArgumentParser):
     # General arguments
@@ -75,22 +77,36 @@ def add_train_args(parser: ArgumentParser):
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
 
+def hash_dict(d):
+    # Convert the dictionary to a sorted tuple of key-value pairs
+    sorted_items = str(tuple(sorted(d.items())))
+    print(sorted_items)
+    
+    # Hash the tuple
+    hash_value = hashlib.sha256(sorted_items.encode()).hexdigest()
+    return hash_value
+
 def modify_train_args(args: Namespace):
     """
     Modifies and validates training arguments in place.
 
     :param args: Arguments.
     """
-    print("device", torch.cuda.is_available())
-    setattr(
-        args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    )
+
     # TODO add real logger functionality
     # TODO: decide what to name the log dir.
     if args.prefix is None:
         args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     else:
-        args.log_dir = args.prefix
+        hashed_params = hash_dict(vars(args))
+        print(hashed_params)
+        args.log_dir = "training_runs/" + args.prefix + f"_paramhash:{hashed_params}"
+    
+    print("device", torch.cuda.is_available())
+    setattr(
+        args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    )
+
 
 def parse_train_args() -> Namespace:
     """
