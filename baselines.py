@@ -95,7 +95,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     A = to_dense_adj(edge_index)[0]
 
     outputs = []
-    for i in range(500): 
+    for i in range(1000): 
         # pick a random vector
         hyper = np.random.randn(x_lift.shape[1])
         hyper = hyper / np.linalg.norm(hyper)
@@ -115,14 +115,14 @@ def max_cut_greedy(args, x_proj, example, score_fn):
 def vertex_cover_greedy(args, x_proj, example, score_fn):
     pass # TODO
 
-def max_cut_gurobi(args, example, time_limit=None):
+def max_cut_gurobi(args, example):
     # Create a new model
     m = gp.Model("maxcut")
     m.params.OutputFlag = 0
 
     # time limit in seconds, if applicable
-    if time_limit:
-        m.params.TimeLimit = time_limit
+    if args.gurobi_timeout:
+        m.params.TimeLimit = args.gurobi_timeout
 
     # Set up node variables
     x_vars = {}
@@ -235,27 +235,28 @@ if __name__ == '__main__':
                 print(f"  Project method {project_name} integral score {project_score}")
 
         # run gurobi
-        if args.problem_type == 'max_cut':
-            x_gurobi = max_cut_gurobi(args, example, time_limit=5)
-            gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
-        elif args.problem_type == 'vertex_cover':
-            x_gurobi = vertex_cover_gurobi(args, example, time_limit=5)
-            gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
-        elif args.problem_type == 'max_clique':
-            raise NotImplementedError(f"max_clique baselines not yet implemented")
-        else:
-            raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
-        print(f"Gurobi integral score {gurobi_score}")
+        if args.gurobi:
+            if args.problem_type == 'max_cut':
+                x_gurobi = max_cut_gurobi(args, example)
+                gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
+            elif args.problem_type == 'vertex_cover':
+                x_gurobi = vertex_cover_gurobi(args, example)
+                gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
+            elif args.problem_type == 'max_clique':
+                raise NotImplementedError(f"max_clique baselines not yet implemented")
+            else:
+                raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
+            print(f"Gurobi integral score {gurobi_score}")
 
-        res = {
-            'index': i,
-            'method': 'gurobi',
-            'type': 'solver',
-            'score': float(gurobi_score),
-            'penalty': float(gurobi_penalty),
-            'x': x_gurobi.tolist(),
-        }
-        outfile.write(json.dumps(res) + '\n')
-        results.append(res)
+            res = {
+                'index': i,
+                'method': 'gurobi',
+                'type': 'solver',
+                'score': float(gurobi_score),
+                'penalty': float(gurobi_penalty),
+                'x': x_gurobi.tolist(),
+            }
+            outfile.write(json.dumps(res) + '\n')
+            results.append(res)
 
     # TODO print some summary statistics
