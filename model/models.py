@@ -10,9 +10,8 @@ from torch.nn import Linear, Parameter, Sequential
 from torch.optim import Adam
 
 from torch_geometric.nn import MessagePassing
-from torch_geometric.nn.models import GAT
-from torch_geometric.nn.conv import GATv2Conv
-from torch_geometric.nn.models.basic_gnn import BasicGNN
+from torch_geometric.nn.models import GAT, GIN, GCN
+from torch_geometric.nn.conv import GatedGraphConv
 
 def construct_model(args):
     if args.problem_type == 'max_cut' and args.model_type == 'LiftMP':
@@ -27,13 +26,29 @@ def construct_model(args):
           num_layers_project=args.num_layers_project,
         )
     elif args.model_type == 'GIN':
-        raise NotImplementedError('GIN not yet implemented')
+        return GIN(in_channels=args.rank,
+                    hidden_channels=args.hidden_channels,
+                    dropout=args.dropout,
+                    norm=args.norm,
+                    num_layers=args.num_layers)
     elif args.model_type == 'GAT':
-        raise NotImplementedError('GAT not yet implemented')
+        return GAT(in_channels=args.rank,
+                    hidden_channels=args.hidden_channels,
+                    dropout=args.dropout,
+                    v2=True,
+                    norm=args.norm,
+                    num_layers=args.num_layers,
+                    heads=args.heads)
     elif args.model_type == 'GCNN':
-        raise NotImplementedError('GCNN not yet implemented')
+        return GCN(in_channels=args.rank,
+                    hidden_channels=args.hidden_channels,
+                    dropout=args.dropout,
+                    norm=args.norm,
+                    num_layers=args.num_layers)
     elif args.model_type == 'GatedGCNN':
-        raise NotImplementedError('GatedGCNN not yet implemented')
+        # TODO - does this need more params? is out_channel correct?
+        return GatedGraphConv(out_channels=args.hidden_layers,
+                    num_layers=args.num_layers)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
