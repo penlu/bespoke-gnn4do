@@ -1,7 +1,5 @@
 # Loss functions and their associated gradients
 
-import matplotlib.pyplot as plt
-
 import numpy as np
 import time
 

@@ -119,3 +119,43 @@ def parse_test_args() -> Namespace:
             setattr(args, k, v)
 
     return args
+
+def modify_baseline_args(args: Namespace):
+    """
+    Modifies and validates training arguments in place.
+
+    :param args: Arguments.
+    """
+    print("device", torch.cuda.is_available())
+    setattr(
+        args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    )
+    # TODO add real logger functionality
+    # TODO: decide what to name the log dir.
+    args.log_dir = "baseline_runs/" + args.prefix + '_' + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    args.batch_size = 1
+
+def parse_baseline_args() -> Namespace:
+    parser = ArgumentParser()
+    parser.add_argument('--problem_type', type=str, default='max_cut',
+        choices=['max_cut', 'vertex_cover', 'max_clique'],
+        help='What problem are we doing?',
+    )
+    parser.add_argument('--seed', type=str, default=0,
+                        help='Torch random seed to use to initialize networks')
+    parser.add_argument('--prefix', type=str, default="",
+                        help='Folder name prefix')
+    parser.add_argument('--rank', type=int, default=32,
+                        help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
+
+    parser.add_argument('--projector', type=str, default='e1',
+        choices=['e1', 'random_hyperplane'],
+        help='How to project solution to integers.',
+    )
+
+    # TODO argument to control list of baselines to run
+
+    add_dataset_args(parser)
+    args = parser.parse_args()
+    modify_baseline_args(args)
+    return args

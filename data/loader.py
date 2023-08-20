@@ -52,13 +52,7 @@ class RandomGraphDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-def construct_loaders(args, mode = None):
-    ''' dataloader construction
-    
-    constructs train and val loaders if mode = None
-    constructs test loader if mode = Test
-
-    '''
+def construct_dataset(args):
     if args.dataset == 'RANDOM':
         dataset = RandomGraphDataset(root='/tmp/random',
                     num_graphs=args.num_graphs,
@@ -68,6 +62,17 @@ def construct_loaders(args, mode = None):
         dataset = TUDataset(root=f'/tmp/{args.TUdataset_name}', name=args.TUdataset_name)
     else:
         raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")
+
+    return dataset
+
+def construct_loaders(args, mode=None):
+    ''' dataloader construction
+    
+    constructs train and val loaders if mode = None
+    constructs test loader if mode = Test
+
+    '''
+    dataset = construct_dataset(args)
 
     if mode == "test":
         # the whole dataset is your loader.
@@ -86,4 +91,4 @@ def construct_loaders(args, mode = None):
 
         return train_loader, val_loader
     else:
-        raise ValueError(f"Invalid mode passed into construct_loaders")
+        raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
