@@ -24,3 +24,7 @@ if __name__ == '__main__':
 
     # train model
     train(args, model, train_loader, optimizer, criterion, val_loader=val_loader)
+
+    # write "done" file
+    with open(os.path.join(args.log_dir, 'done.txt'), 'w') as file:
+        file.write("done.")

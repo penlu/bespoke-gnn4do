@@ -2,6 +2,8 @@ import time
 import torch
 import torch.nn.functional as F
 from model.saving import save_model
+import numpy as np
+import os
 
 def featurize_batch(args, batch):
     N = batch.num_nodes
@@ -24,6 +26,8 @@ def train(args, model, train_loader, optimizer, criterion, val_loader = None):
     '''
     epochs = args.epochs
     model_folder = args.log_dir
+    
+    losses = []
 
     model.to(args.device)
     for ep in range(epochs):
@@ -31,7 +35,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader = None):
         total_obj = 0.
         for batch in train_loader:
             x_in, edge_index, edge_weights = featurize_batch(args, batch)
-            x_out = model(x_in, edge_index, edge_weights)
+            x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weights)
 
             # get objective
             obj = criterion(x_out, edge_index)
@@ -44,6 +48,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader = None):
             #print(f"obj={obj.cpu().detach().numpy():0.2f}")
 
         epoch_time = time.time() - start_time
+        losses.append(total_obj)
         print(f"epoch {ep} t={epoch_time} total_obj={total_obj:0.2f}")
 
         # occasionally run validation and print loss
@@ -56,6 +61,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader = None):
     # save trained model
     # TODO save best model, not just a bunch of epochs.
     save_model(model, f"{model_folder}/model_ep{epochs}.pt")
+    np.save(os.path.join(args.log_dir, "losses.npy"), losses)
 
 def predict(model, loader, args):
     batches = []

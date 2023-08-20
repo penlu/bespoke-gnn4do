@@ -26,13 +26,13 @@ def construct_model(args):
           num_layers_project=args.num_layers_project,
         )
     elif args.model_type == 'GIN':
-        return GIN(in_channels=args.rank,
+        model = GIN(in_channels=args.rank,
                     hidden_channels=args.hidden_channels,
                     dropout=args.dropout,
                     norm=args.norm,
                     num_layers=args.num_layers)
     elif args.model_type == 'GAT':
-        return GAT(in_channels=args.rank,
+        model = GAT(in_channels=args.rank,
                     hidden_channels=args.hidden_channels,
                     dropout=args.dropout,
                     v2=True,
@@ -40,14 +40,14 @@ def construct_model(args):
                     num_layers=args.num_layers,
                     heads=args.heads)
     elif args.model_type == 'GCNN':
-        return GCN(in_channels=args.rank,
+        model = GCN(in_channels=args.rank,
                     hidden_channels=args.hidden_channels,
                     dropout=args.dropout,
                     norm=args.norm,
                     num_layers=args.num_layers)
     elif args.model_type == 'GatedGCNN':
         # TODO - does this need more params? is out_channel correct?
-        return GatedGraphConv(out_channels=args.hidden_layers,
+        model =  GatedGraphConv(out_channels=args.hidden_channels,
                     num_layers=args.num_layers)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
