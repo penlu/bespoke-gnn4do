@@ -8,7 +8,11 @@ run_job () {
     DATASET=${JOBARRAY[1]}
     SLOT=$2
     echo $MODEL $DATASET $((SLOT - 1))
-    CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py --epochs=1 --prefix=230820_test2 --model_type=$MODEL --TUdataset_name=$DATASET --dataset=TU
+    CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
+        --stepwise=True --steps=50000 \
+        --valid_freq=100 \
+        --prefix=230821_test \
+        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=TU
 }
 export -f run_job
 

@@ -3,7 +3,7 @@ from model.parsing import parse_train_args
 import json
 import os
 from data.loader import construct_loaders
-from model.training import train
+from model.training import train, validate
 from model.models import construct_model
 from model.losses import get_loss_fn
 
@@ -25,6 +25,10 @@ if __name__ == '__main__':
     # train model
     train(args, model, train_loader, optimizer, criterion, val_loader=val_loader)
 
+    # run final validation
+    valid_loss = validate(args, model, val_loader, criterion)
+
     # write "done" file
     with open(os.path.join(args.log_dir, 'done.txt'), 'w') as file:
-        file.write("done.")
+        file.write(f"{valid_loss}\n")
+        file.write("done.\n")

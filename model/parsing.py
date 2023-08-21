@@ -66,16 +66,23 @@ def add_train_args(parser: ArgumentParser):
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate')
-    parser.add_argument('--epochs', type=int, default=100,
-                        help='Training epoch count')
-    parser.add_argument('--valid_epochs', type=int, default=0,
-                        help='Run validation every N epochs (0 to never run validation)')
-    parser.add_argument('--save_epochs', type=int, default=10,
-                        help='Save model every N epochs (0 to only save at end of training)')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for training')
+    parser.add_argument('--valid_freq', type=int, default=0,
+                        help='Run validation every N steps/epochs (0 to never run validation)')
+    parser.add_argument('--save_freq', type=int, default=0,
+                        help='Save model every N steps/epochs (0 to only save at end of training)')
+
+    parser.add_argument('--stepwise', type=bool, default=True,
+                        help='Train by number of gradient steps or number of epochs?')
+    parser.add_argument('--steps', type=int, default=50000,
+                        help='Training step count')
+    parser.add_argument('--epochs', type=int, default=100,
+                        help='Training epoch count')
 
     # TODO need some params for how often to run validation, what validation to run, how often to save
+    parser.add_argument('--valid_fraction', type=float, default=0.2,
+                        help='Fraction of data to set aside for validation. XXX currently not used')
 
 def hash_dict(d):
     # Convert the dictionary to a sorted tuple of key-value pairs
