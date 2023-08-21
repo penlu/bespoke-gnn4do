@@ -26,29 +26,13 @@ def construct_model(args):
           num_layers_project=args.num_layers_project,
         )
     elif args.model_type == 'GIN':
-        model = GIN(in_channels=args.rank,
-                    hidden_channels=args.hidden_channels,
-                    dropout=args.dropout,
-                    norm=args.norm,
-                    num_layers=args.num_layers)
+        model = GINLiftNetwork(args)
     elif args.model_type == 'GAT':
-        model = GAT(in_channels=args.rank,
-                    hidden_channels=args.hidden_channels,
-                    dropout=args.dropout,
-                    v2=True,
-                    norm=args.norm,
-                    num_layers=args.num_layers,
-                    heads=args.heads)
+        model = GATLiftNetwork(args)
     elif args.model_type == 'GCNN':
-        model = GCN(in_channels=args.rank,
-                    hidden_channels=args.hidden_channels,
-                    dropout=args.dropout,
-                    norm=args.norm,
-                    num_layers=args.num_layers)
+        model = GCNLiftNetwork(args)
     elif args.model_type == 'GatedGCNN':
-        # TODO - does this need more params? is out_channel correct?
-        model =  GatedGraphConv(out_channels=args.hidden_channels,
-                    num_layers=args.num_layers)
+        model = GatedGCNLiftNetwork(args)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
@@ -134,10 +118,66 @@ class MaxCutLiftProjectNetwork(torch.nn.Module):
         out = self.project_net(out, edge_index, edge_weights)
         return out
 
-# TODO graph isomorphism network
+# graph isomorphism network
+# TODO version with gradients, version allowing negation of neighbors
+class GINLiftNetwork(torch.nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        self.net = GIN(in_channels=args.rank,
+            hidden_channels=args.hidden_channels,
+            dropout=args.dropout,
+            norm=args.norm,
+            num_layers=args.num_layers)
 
-# TODO graph attention network
+    def forward(self, x, edge_index, edge_weights):
+        out = self.net(x=x, edge_index=edge_index)
+        out = F.normalize(out, dim=1)
+        return out
 
-# TODO graph convnet
+# graph attention network
+# TODO version with gradients, version allowing negation of neighbors
+class GATLiftNetwork(torch.nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        self.net = GAT(in_channels=args.rank,
+            hidden_channels=args.hidden_channels,
+            dropout=args.dropout,
+            v2=True,
+            norm=args.norm,
+            num_layers=args.num_layers,
+            heads=args.heads)
 
-# TODO gated graph convnet
+    def forward(self, x, edge_index, edge_weights):
+        out = self.net(x=x, edge_index=edge_index)
+        out = F.normalize(out, dim=1)
+        return out
+
+# graph convnet
+# TODO version with gradients, version allowing negation of neighbors
+class GCNLiftNetwork(torch.nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        self.net = GCN(in_channels=args.rank,
+            hidden_channels=args.hidden_channels,
+            dropout=args.dropout,
+            norm=args.norm,
+            num_layers=args.num_layers)
+
+    def forward(self, x, edge_index, edge_weights):
+        out = self.net(x=x, edge_index=edge_index)
+        out = F.normalize(out, dim=1)
+        return out
+
+# gated graph convnet
+# TODO version with gradients, version allowing negation of neighbors
+class GatedGCNLiftNetwork(torch.nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        # TODO - does this need more params? is out_channel correct?
+        self.net = GatedGraphConv(out_channels=args.hidden_channels,
+            num_layers=args.num_layers)
+
+    def forward(self, x, edge_index, edge_weights):
+        out = self.net(x=x, edge_index=edge_index)
+        out = F.normalize(out, dim=1)
+        return out

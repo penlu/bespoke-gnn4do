@@ -35,7 +35,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader = None):
         total_obj = 0.
         for batch in train_loader:
             x_in, edge_index, edge_weights = featurize_batch(args, batch)
-            x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weights)
+            x_out = model(x=x_in, edge_index=edge_index, edge_weights=edge_weights)
 
             # get objective
             obj = criterion(x_out, edge_index)
