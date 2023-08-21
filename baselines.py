@@ -20,7 +20,7 @@ def max_cut_sdp(args, example):
     N = example.num_nodes
     edge_index = example.edge_index
     E = edge_index.shape[1]
-    A = to_dense_adj(edge_index)[0]
+    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     edge_weights = torch.ones(E)
 
@@ -43,7 +43,7 @@ def max_cut_sdp(args, example):
     ]
     prob = cp.Problem(cp.Minimize(cp.trace(A @ X)),
                     constraints)
-    prob.solve()
+    prob.solve(verbose=True)
 
     # Print result.
     sol = prob.value / 2.
@@ -60,7 +60,7 @@ def max_cut_sdp(args, example):
     # ensure eigenvalues are positive
     # pad by .001 for precision issues with cholesky decomposition
     if np.min(eigenval) < 0:
-        X = X + (0.0001 - np.min(eigenval)) * np.eye(N)
+        X = X + (0.001 - np.min(eigenval)) * np.eye(N)
     V = np.linalg.cholesky(X)
     #print('Cholesky Decomposition:', V)
 
@@ -93,6 +93,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     edge_index = example.edge_index
     E = edge_index.shape[1]
     A = to_dense_adj(edge_index)[0]
+    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     outputs = []
     for i in range(1000): 
@@ -150,8 +151,9 @@ def max_cut_score(args, X, example):
     # convert numpy array to torch tensor
     if isinstance(X, np.ndarray):
         X = torch.FloatTensor(X)
+    N = example.num_nodes
     edge_index = example.edge_index
-    A = to_torch_csr_tensor(edge_index)
+    A = to_torch_csr_tensor(edge_index, size=N)
     E = edge_index.shape[0]
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
     obj = torch.trace(torch.matmul(A, XX)) / 2.
@@ -204,7 +206,7 @@ if __name__ == '__main__':
         # we'll run each pair of lift method and project method
         for lift_name, lift_fn in lift_fns.items():
             # calculate lift output and save score
-            x_lift = lift_fn(args, example)
+            x_lift = torch.FloatTensor(lift_fn(args, example))
             lift_score, lift_penalty = score_fn(args, x_lift, example)
             res = {
                 'index': i,
@@ -220,7 +222,7 @@ if __name__ == '__main__':
 
             # now use each project method and save scores
             for project_name, project_fn in project_fns.items():
-                x_project = project_fn(args, x_lift, example, score_fn)
+                x_project = torch.FloatTensor(project_fn(args, x_lift, example, score_fn))
                 project_score, project_penalty = score_fn(args, x_project, example)
                 res = {
                     'index': i,
