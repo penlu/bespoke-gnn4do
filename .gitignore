@@ -1,5 +1,7 @@
 training_runs/*
+baseline_runs/*
 *.pyc
 **/.*.swp
 **/.*.swo
 **/__pycache__
+.ipynb_checkpoints
