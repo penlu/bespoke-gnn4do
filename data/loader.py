@@ -12,7 +12,7 @@ from torch_geometric.data.datapipes import functional_transform
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils.convert import from_networkx
-from torch_geometric.transforms import BaseTransform
+from torch_geometric.transforms import BaseTransform, AddRandomWalkPE
 from torch_geometric.utils import (
     get_laplacian,
     get_self_loop_attr,
@@ -39,7 +39,7 @@ def add_node_attr(data: Data, value: Any,
 
     return data
 
-@functional_transform('add_laplacian_eigenvector_dense_pe')
+@functional_transform('add_laplacian_eigenvectors')
 class AddLaplacianEigenvectorPE(BaseTransform):
     r"""Adds the Laplacian eigenvector positional encoding from the
     `"Benchmarking Graph Neural Networks" <https://arxiv.org/abs/2003.00982>`_
@@ -88,8 +88,9 @@ class AddLaplacianEigenvectorPE(BaseTransform):
         #print("SHAPE", L.shape)
 
         eig_vals, eig_vecs = eig_fn(L, **self.kwargs)
-
         eig_vecs = np.real(eig_vecs[:, eig_vals.argsort()])
+        #data = add_node_attr(data, eig_vecs, attr_name=self.attr_name)
+
         if num_nodes < self.k + 2:
             padding = self.k + 2 - num_nodes
             eig_vecs = np.concatenate((eig_vecs, np.zeros((num_nodes, padding), dtype=np.float32)), axis=1)
@@ -143,22 +144,30 @@ class RandomGraphDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 def construct_dataset(args):
+    # precompute laplacian eigenvectors unconditionally
+    pre_transform = AddLaplacianEigenvectorPE(k=8, is_undirected=True)
+
     transform = None
-    if args.transform == 'laplacian_eigenvector_PE':
-        assert args.eigenvector_k < args.rank
-        transform = AddLaplacianEigenvectorPE(k=args.eigenvector_k, is_undirected=True)
-    elif args.transform is not None:
-        raise ValueError(f"Invalid transform passed into construct_loaders: {args.transform}")
+    if args.positional_encoding == 'laplacian_eigenvector':
+        assert args.pe_dimension < args.rank
+        assert args.pe_dimension <= 8 # for now, this is our maximum
+    elif args.positional_encoding == 'random_walk':
+        assert args.pe_dimension < args.rank
+        transform = AddRandomWalkPE(walk_length=args.pe_dimension)
+    elif args.positional_encoding is not None:
+        raise ValueError(f"Invalid positional encoding passed into construct_loaders: {args.positional_encoding}")
 
     if args.dataset == 'RANDOM':
         dataset = RandomGraphDataset(root='/tmp/random',
                     num_graphs=args.num_graphs,
                     num_nodes_per_graph=args.num_nodes_per_graph,
                     edge_probability=args.edge_probability,
+                    pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'TU':
         dataset = TUDataset(root=f'/tmp/{args.TUdataset_name}',
                     name=args.TUdataset_name,
+                    pre_transform=pre_transform,
                     transform=transform)
     else:
         raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")

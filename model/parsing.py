@@ -39,10 +39,12 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--TUdataset_name', type=str, default=None,
                         help='When using TU dataset, which dataset to use?')
 
-    # Add transform?
-    parser.add_argument('--transform', type=str, default=None,
-                        choices=['laplacian_eigenvector_PE'],
-                        help='Apply a transform?')
+    # Positional encoding arguments
+    parser.add_argument('--positional_encoding', type=str, default=None,
+                        choices=['laplacian_eigenvector', 'random_walk'],
+                        help='Use a positional encoding?')
+    parser.add_argument('--pe_dimension', type=int, default=8,
+                        help='Dimensionality of the positional encoding')
 
 def add_train_args(parser: ArgumentParser):
     """
@@ -118,7 +120,6 @@ def modify_train_args(args: Namespace):
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
-
 
 def parse_train_args() -> Namespace:
     """

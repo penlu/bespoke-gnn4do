@@ -11,14 +11,21 @@ def featurize_batch(args, batch):
     N = batch.num_nodes
     edge_index = batch.edge_index.to(args.device)
 
-    if args.transform is None:
+    if args.positional_encoding is None:
         # generate random vector input
         x_in = torch.randn((N, args.rank), dtype=torch.float, device=args.device)
         x_in = F.normalize(x_in, dim=1)
-    elif args.transform == 'laplacian_eigenvector_PE':
-        x_in = torch.randn((N, args.rank - args.eigenvector_k), dtype=torch.float, device=args.device)
+    elif args.positional_encoding == 'laplacian_eigenvector':
+        x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
         x_in = F.normalize(x_in, dim=1)
-        pe = batch.laplacian_eigenvector_pe.to(args.device)
+        pe = batch.laplacian_eigenvector_pe.to(args.device)[:, :args.pe_dimension]
+        sign = -1 + 2 * torch.randint(0, 2, (args.pe_dimension, ), device=args.device)
+        pe *= sign
+        x_in = torch.cat((x_in, pe), 1)
+    elif args.positional_encoding == 'random_walk':
+        x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
+        x_in = F.normalize(x_in, dim=1)
+        pe = batch.random_walk_pe.to(args.device)
         x_in = torch.cat((x_in, pe), 1)
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
