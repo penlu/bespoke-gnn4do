@@ -70,9 +70,10 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
 
     model.to(args.device)
 
+    ep = 0
     steps = 0
 
-    for ep in range(epochs):
+    while args.stepwise or ep < epochs:
         start_time = time.time()
 
         # reset epoch average loss counters
@@ -137,6 +138,8 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
             # occasionally save model
             if args.save_freq != 0 and ep % args.save_freq == 0:
                 save_model(model, f"{model_folder}/model_ep{ep}.pt")
+
+        ep += 1
 
     # end of training: save trained model
     # TODO save best model, not just a bunch of epochs
