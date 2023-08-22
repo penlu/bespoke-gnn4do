@@ -1,11 +1,13 @@
-import torch
-from model.parsing import parse_train_args
 import json
 import os
+
+import torch
+
 from data.loader import construct_loaders
-from model.training import train, validate
-from model.models import construct_model
 from model.losses import get_loss_fn
+from model.models import construct_model
+from model.parsing import parse_train_args
+from model.training import train, validate
 
 if __name__ == '__main__':
     # parse args

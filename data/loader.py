@@ -1,13 +1,16 @@
 # Dataset loading functionality
 
-import torch
 import networkx
 import numpy
+
+import torch
 from torch.utils.data import random_split
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils.convert import from_networkx
+from torch_geometric.transforms import AddLaplacianEigenvectorPE
+
 from utils.graph_utils import gen_graph
 
 class RandomGraphDataset(InMemoryDataset):
@@ -53,13 +56,24 @@ class RandomGraphDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 def construct_dataset(args):
+    transform = None
+    if args.transform == 'laplacian_eigenvector_PE':
+        assert args.eigenvector_k < args.rank
+        transform = AddLaplacianEigenvectorPE(k=args.eigenvector_k, is_undirected=True)
+    elif args.transform is not None:
+        raise ValueError(f"Invalid transform passed into construct_loaders: {args.transform}")
+
     if args.dataset == 'RANDOM':
         dataset = RandomGraphDataset(root='/tmp/random',
                     num_graphs=args.num_graphs,
                     num_nodes_per_graph=args.num_nodes_per_graph,
-                    edge_probability=args.edge_probability)
+                    edge_probability=args.edge_probability,
+                    transform=transform)
     elif args.dataset == 'TU':
-        dataset = TUDataset(root=f'/tmp/{args.TUdataset_name}', name=args.TUdataset_name)
+        dataset = TUDataset(root=f'/tmp/{args.TUdataset_name}',
+                    name=args.TUdataset_name,
+                    pre_filter=lambda x: x.num_nodes >= 8,
+                    transform=transform)
     else:
         raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")
 

@@ -39,6 +39,13 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--TUdataset_name', type=str, default=None,
                         help='When using TU dataset, which dataset to use?')
 
+    # Add transform?
+    parser.add_argument('--transform', type=str, default=None,
+                        choices=['laplacian_eigenvector_PE'],
+                        help='Apply a transform?')
+    parser.add_argument('--eigenvector_k', type=int, default=6,
+                        help='If using Laplacian eigenvector positional encoding, set k value')
+
 def add_train_args(parser: ArgumentParser):
     """
     Adds training arguments to an ArgumentParser.
