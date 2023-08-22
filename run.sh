@@ -11,7 +11,7 @@ run_job () {
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
         --stepwise=True --steps=50000 \
         --valid_freq=100 --dropout=0 \
-        --transform=laplacian_eigenvector_PE --eigenvector_k=6 \
+        --transform=laplacian_eigenvector_PE \
         --prefix=230821_test \
         --model_type=$MODEL --TUdataset_name=$DATASET --dataset=TU
 }
