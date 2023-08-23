@@ -23,3 +23,27 @@ def max_cut_loss(X, edge_index):
     obj = torch.trace(torch.matmul(A, XX)) / 2.
 
     return obj
+
+def get_score_fn(args):
+    if args.problem_type == 'max_cut':
+        return max_cut_score
+    elif args.problem_type == 'vertex_cover':
+        return vertex_cover_score
+    elif args.problem_type == 'max_clique':
+        raise NotImplementedError('max_clique loss not yet implemented')
+
+def max_cut_score(args, X, example):
+    # convert numpy array to torch tensor
+    if isinstance(X, np.ndarray):
+        X = torch.FloatTensor(X)
+    N = example.num_nodes
+    edge_index = example.edge_index.to(X.device)
+    A = to_torch_csr_tensor(edge_index, size=N)
+    E = edge_index.shape[0]
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    obj = torch.trace(torch.matmul(A, XX)) / 2.
+
+    return (E - obj) / 2., 0.
+
+def vertex_cover_score():
+    raise NotImplementedError()

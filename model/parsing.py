@@ -108,7 +108,6 @@ def modify_train_args(args: Namespace):
     """
 
     # TODO add real logger functionality
-    # TODO: decide what to name the log dir.
     if args.prefix is None:
         args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     else:
@@ -174,9 +173,11 @@ def modify_baseline_args(args: Namespace):
     # TODO add real logger functionality
     # TODO: decide what to name the log dir.
     if args.prefix is None:
-        args.log_dir = "training_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        args.log_dir = "baseline_runs/" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     else:
-        args.log_dir = args.prefix
+        hashed_params = hash_dict(vars(args))
+        #print(hashed_params)
+        args.log_dir = "baseline_runs/" + args.prefix + f"_paramhash:{hashed_params}"
     args.batch_size = 1
 
 def parse_baseline_args() -> Namespace:
