@@ -41,7 +41,7 @@ def max_cut_score(args, X, example):
     N = example.num_nodes
     edge_index = example.edge_index.to(X.device)
     A = to_torch_csr_tensor(edge_index, size=N)
-    E = edge_index.shape[0]
+    E = edge_index.shape[1]
     XX = torch.matmul(X, torch.transpose(X, -1, -2))
     obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
 
