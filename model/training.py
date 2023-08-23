@@ -6,6 +6,8 @@ import torch
 import torch.nn.functional as F
 
 from model.saving import save_model
+from model.losses import get_loss_fn, get_score_fn
+from utils.baselines import random_hyperplane_projector
 
 def featurize_batch(args, batch):
     N = batch.num_nodes
@@ -37,22 +39,26 @@ def featurize_batch(args, batch):
     return x_in, edge_index, edge_weight
 
 # measure and return the validation loss
-def validate(args, model, val_loader, criterion):
+def validate(args, model, val_loader):
+    loss_fn = get_loss_fn(args)
+    score_fn = get_score_fn(args)
+
     total_loss = 0.
     total_score = 0.
     total_count = 0
     with torch.no_grad():
         for batch in val_loader:
-            x_in, edge_index, edge_weight = featurize_batch(args, batch)
-            x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weight)
-            loss = criterion(x_out, edge_index)
+            for example in batch.to_data_list():
+                x_in, edge_index, edge_weight = featurize_batch(args, example)
+                x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weight)
+                loss = loss_fn(x_out, edge_index)
+                total_loss += loss.cpu().detach().numpy()
 
-            total_loss += loss.cpu().detach().numpy()
+                x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                score, penalty = score_fn(args, x_proj, example)
+                total_score += score
 
-            E = edge_index.shape[0]
-            total_score += (E - loss.cpu().detach().numpy()) / 2.
-
-            total_count += batch.num_graphs
+                total_count += 1
 
     return total_loss / total_count, total_score / total_count
 
@@ -104,16 +110,16 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
 
             steps += 1
             if args.stepwise:
-                # check if training is done
-                if steps >= args.steps:
-                    break
-
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
-                    valid_loss, valid_score = validate(args, model, val_loader, criterion)
+                    valid_loss, valid_score = validate(args, model, val_loader)
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
                     print(f"  VALIDATION steps={steps} valid_loss={valid_loss} valid_score={valid_score}")
+
+                # check if training is done
+                if steps >= args.steps:
+                    break
 
                 # occasionally save model
                 if args.save_freq != 0 and steps % args.save_freq == 0:
@@ -130,7 +136,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
         if not args.stepwise:
             # occasionally run validation
             if args.valid_freq != 0 and ep % args.valid_freq == 0:
-                valid_loss, valid_score = validate(args, model, val_loader, criterion)
+                valid_loss, valid_score = validate(args, model, val_loader)
                 valid_losses.append(valid_loss)
                 valid_scores.append(valid_score)
                 print(f"  VALIDATION epoch={ep} steps={steps} valid_loss={valid_loss} valid_score={valid_score}")

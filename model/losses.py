@@ -19,8 +19,8 @@ def get_loss_fn(args):
 def max_cut_loss(X, edge_index):
     # compute loss
     A = to_torch_csr_tensor(edge_index)
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
+    XX = torch.matmul(X, torch.transpose(X, -1, -2))
+    obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
 
     return obj
 
@@ -36,12 +36,14 @@ def max_cut_score(args, X, example):
     # convert numpy array to torch tensor
     if isinstance(X, np.ndarray):
         X = torch.FloatTensor(X)
+    if len(X.shape) == 1:
+        X = X[:, None]
     N = example.num_nodes
     edge_index = example.edge_index.to(X.device)
     A = to_torch_csr_tensor(edge_index, size=N)
     E = edge_index.shape[0]
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
+    XX = torch.matmul(X, torch.transpose(X, -1, -2))
+    obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
 
     return (E - obj) / 2., 0.
 

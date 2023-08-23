@@ -81,27 +81,23 @@ def e1_projector(args, x_lift, example, score_fn):
 def random_hyperplane_projector(args, x_lift, example, score_fn):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
-    x_lift = x_lift.to(torch.device("cpu"))
     N = example.num_nodes
-    edge_index = example.edge_index.to(torch.device("cpu"))
+    edge_index = example.edge_index.to(x_lift.device)
     E = edge_index.shape[1]
     A = to_dense_adj(edge_index)[0]
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     outputs = []
-    for i in range(1000): 
-        # pick a random vector
-        hyper = torch.randn(x_lift.shape[1], device=torch.device("cpu"))
-        hyper = F.normalize(hyper, dim=0)
+    n_hyperplanes = 1000 # TODO make this modifiable in args
 
-        # project onto vector
-        x_proj = torch.matmul(x_lift, hyper)
-        x_int = torch.sign(x_proj)[:, None]
-
-        outputs.append((score_fn(args, x_int, example), x_int))
-
-    outputs.sort(reverse=True, key=lambda x: x[0])
-    return outputs[0][1]
+    hyper = torch.randn((n_hyperplanes, x_lift.shape[1]), device=x_lift.device)
+    hyper = F.normalize(hyper)
+    x_proj = torch.matmul(hyper, x_lift.t())
+    x_int = torch.sign(x_proj)[:, :, None]
+    scores, penalties = score_fn(args, x_int, example)
+    best = torch.argmax(scores)
+    out = x_int[best, :, 0]
+    return out
 
 def max_cut_greedy(args, x_proj, example, score_fn):
     pass # TODO
@@ -136,6 +132,6 @@ def max_cut_gurobi(args, example):
     m.optimize()
 
     set_size = m.objVal
-    x_vals = np.array([var.x for var in m.getVars()])[:, None] * 2 - 1
+    x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
 
     return x_vals
