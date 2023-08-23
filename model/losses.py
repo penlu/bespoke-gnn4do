@@ -18,7 +18,7 @@ def get_loss_fn(args):
 # X should have shape (N, r)
 def max_cut_loss(X, edge_index):
     # compute loss
-    A = to_torch_csr_tensor(edge_index)
+    A = to_torch_csr_tensor(edge_index, size=X.shape[0])
     XX = torch.matmul(X, torch.transpose(X, -1, -2))
     obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
 

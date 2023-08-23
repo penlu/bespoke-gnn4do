@@ -165,7 +165,7 @@ def construct_dataset(args):
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'TU':
-        dataset = TUDataset(root=f'/tmp/{args.TUdataset_name}',
+        dataset = TUDataset(root=f'/tmp',
                     name=args.TUdataset_name,
                     pre_transform=pre_transform,
                     transform=transform)

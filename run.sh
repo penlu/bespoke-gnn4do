@@ -26,4 +26,4 @@ for model in 'LiftMP' 'GIN' 'GAT' 'GCNN' 'GatedGCNN' ; do
     for dataset in 'RANDOM' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         echo $model $dataset
     done
-done | parallel --ungroup -j1 run_job {} {%}
+done | parallel --ungroup -j2 run_job {} {%}
