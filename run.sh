@@ -7,18 +7,23 @@ run_job () {
     MODEL=${JOBARRAY[0]}
     DATASET=${JOBARRAY[1]}
     SLOT=$2
-    echo $MODEL $DATASET $((SLOT - 1))
+    if [ $DATASET = 'RANDOM' ] ; then
+        TYPE='RANDOM'
+    else
+        TYPE='TU'
+    fi
+    echo $MODEL $TYPE $DATASET $((SLOT - 1))
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
         --stepwise=True --steps=50000 \
         --valid_freq=100 --dropout=0 \
         --positional_encoding=laplacian_eigenvector --pe_dimension=8 \
-        --prefix=230822_test \
-        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=TU
+        --prefix=230823_test \
+        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE
 }
 export -f run_job
 
-for model in 'GIN' 'GAT' 'GCNN' 'GatedGCNN' ; do
-    for dataset in 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
+for model in 'LiftMP' 'GIN' 'GAT' 'GCNN' 'GatedGCNN' ; do
+    for dataset in 'RANDOM' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         echo $model $dataset
     done
 done | parallel --ungroup -j1 run_job {} {%}
