@@ -53,7 +53,7 @@ def add_train_args(parser: ArgumentParser):
     :param parser: An ArgumentParser.
     """
     # Model construction arguments
-    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN'],
+    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN', 'NegationGAT'],
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
@@ -69,6 +69,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Normalization to use')
     parser.add_argument('--heads', type=int, default=4,
                         help='number of heads for GAT')
+    parser.add_argument('--finetune_from', type=str, default=None, 
+                        help="model file to load weights from for finetuning")
 
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,
@@ -105,7 +107,24 @@ def modify_train_args(args: Namespace):
     Modifies and validates training arguments in place.
 
     :param args: Arguments.
-    """
+    """  
+
+    if args.finetune_from is not None:
+        model_folder = os.path.dirname(args.finetune_from)
+        model_args = read_params_from_folder(model_folder)
+        print(model_args.keys())
+        relevant_keys = ['problem_type', 
+                         'model_type', 
+                         'num_layers', 
+                         'num_layers_project', 
+                         'rank', 'dropout', 
+                         'hidden_channels', 
+                         'norm', 
+                         'heads', 
+                         'positional_encoding',
+                         'pe_dimension']
+        for k in relevant_keys:
+            setattr(args, k, model_args[k])
 
     # TODO add real logger functionality
     if args.prefix is None:
@@ -114,7 +133,6 @@ def modify_train_args(args: Namespace):
         hashed_params = hash_dict(vars(args))
         #print(hashed_params)
         args.log_dir = "training_runs/" + args.prefix + f"_paramhash:{hashed_params}"
-    
     print("device", torch.cuda.is_available())
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -135,6 +153,12 @@ def parse_train_args() -> Namespace:
 
     return args
 
+def read_params_from_folder(model_folder):
+    with open(os.path.join(model_folder, 'params.txt'), 'r') as f:
+        model_args = json.load(f)
+    
+    return model_args
+
 def parse_test_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument('--model_folder', type=str, default=None,
@@ -146,8 +170,7 @@ def parse_test_args() -> Namespace:
     args = parser.parse_args()
 
     # read params from model folder.
-    with open(os.path.join(args.model_folder, 'params.txt'), 'r') as f:
-        model_args = json.load(f)
+    model_args = read_params_from_folder(args.model_folder)
 
     # set device
     model_args[ "device"] =  torch.device("cuda" if torch.cuda.is_available() else "cpu")

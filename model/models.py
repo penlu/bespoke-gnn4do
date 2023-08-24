@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import time
+import os
 
 import torch
 import torch.nn.functional as F
@@ -12,6 +13,9 @@ from torch.optim import Adam
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn.models import GAT, GIN, GCN
 from torch_geometric.nn.conv import GatedGraphConv
+
+from model.more_models import NegationGAT
+from model.saving import load_model
 
 def construct_model(args):
     if args.problem_type == 'max_cut' and args.model_type == 'LiftMP':
@@ -33,8 +37,19 @@ def construct_model(args):
         model = GCNLiftNetwork(args)
     elif args.model_type == 'GatedGCNN':
         model = GatedGCNLiftNetwork(args)
+    elif args.model_type == 'NegationGAT':
+        model = NegationGAT(in_channels=args.rank, 
+                            hidden_channels=args.hidden_channels, 
+                            dropout=args.dropout, 
+                            v2=True, norm=args.norm, 
+                            num_layers=args.num_layers)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
+
+    if args.finetune_from is not None:
+        # load in model for finetuning
+        model = load_model(model, args.finetune_from)
+        model.to(args.device)
 
     opt = Adam(model.parameters(), args.lr)
 
