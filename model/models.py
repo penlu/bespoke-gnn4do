@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import time
+import os
 
 import torch
 import torch.nn.functional as F
@@ -14,6 +15,7 @@ from torch_geometric.nn.models import GAT, GIN, GCN
 from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
+from model.saving import load_model
 
 def construct_model(args):
     if args.problem_type == 'max_cut' and args.model_type == 'LiftMP':
@@ -43,6 +45,9 @@ def construct_model(args):
                             num_layers=args.num_layers)
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
+
+    if args.finetune_from is not None:
+        model = load_model(model, args.finetune_from)
 
     opt = Adam(model.parameters(), args.lr)
 
