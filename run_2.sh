@@ -12,8 +12,8 @@ run_job () {
     fi
     echo $MODEL $TYPE $DATASET $((SLOT - 1))
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
-        --stepwise=True --steps=50000 \
-        --valid_freq=100 --prefix=230824_finetuning_ \
+        --stepwise=True --steps=5000 \
+        --valid_freq=100 --prefix=230824_finetuning_short \
         --finetune_from=$MODEL_FOLDER --TUdataset_name=$DATASET --dataset=$TYPE
 }
 export -f run_job
@@ -28,4 +28,4 @@ for model_folder in "${pretrained_models[@]}" ; do
     for dataset in 'RANDOM' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         echo $model_folder $dataset
     done
-done | parallel --ungroup -j2 run_job {} {%}
+done | parallel --ungroup -j1 run_job {} {%}
