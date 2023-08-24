@@ -47,6 +47,7 @@ def construct_model(args):
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
     if args.finetune_from is not None:
+        # load in model for finetuning
         model = load_model(model, args.finetune_from)
 
     opt = Adam(model.parameters(), args.lr)
