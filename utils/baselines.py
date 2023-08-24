@@ -131,12 +131,18 @@ def max_cut_gurobi(args, example):
     # Optimize model
     m.optimize()
 
+    print("model status:", m.status)
+
     set_size = m.objVal
     x_vals = None
     try:
         x_vals = np.array([var.X for var in m.getVars()]) * 2 - 1
     except:
-        print("Issue using var.X; trying var.x")
-        x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
+        try:
+            print("Issue using var.X; trying var.x")
+            x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
+        except:
+            print("didn't work either?!?! retrying!!!")
+            return max_cut_gurobi(args, example)
 
     return x_vals

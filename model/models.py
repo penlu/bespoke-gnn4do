@@ -49,6 +49,7 @@ def construct_model(args):
     if args.finetune_from is not None:
         # load in model for finetuning
         model = load_model(model, args.finetune_from)
+        model.to(args.device)
 
     opt = Adam(model.parameters(), args.lr)
 

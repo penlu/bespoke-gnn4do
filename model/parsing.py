@@ -110,7 +110,8 @@ def modify_train_args(args: Namespace):
     """  
 
     if args.finetune_from is not None:
-        model_args = read_params_from_folder(os.path.dirname(args.finetune_from))
+        model_folder = os.path.dirname(args.finetune_from)
+        model_args = read_params_from_folder(model_folder)
         print(model_args.keys())
         relevant_keys = ['problem_type', 
                          'model_type', 
