@@ -11,7 +11,7 @@ def get_loss_fn(args):
     if args.problem_type == 'max_cut':
         return max_cut_loss
     elif args.problem_type == 'vertex_cover':
-        raise NotImplementedError('vertex_cover loss not yet implemented')
+        return vertex_cover_loss
     elif args.problem_type == 'max_clique':
         raise NotImplementedError('max_clique loss not yet implemented')
 
@@ -22,6 +22,11 @@ def max_cut_loss(X, edge_index):
     XX = torch.matmul(X, torch.transpose(X, -1, -2))
     obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
 
+    return obj
+
+def vertex_cover_loss(X, edge_index):
+    # taken from maxcut-80/loss/loss_vc.py::obj_vc_lift
+    raise NotImplementedError()
     return obj
 
 def get_score_fn(args):

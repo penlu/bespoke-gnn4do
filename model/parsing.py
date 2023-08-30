@@ -53,7 +53,7 @@ def add_train_args(parser: ArgumentParser):
     :param parser: An ArgumentParser.
     """
     # Model construction arguments
-    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN', 'NegationGAT'],
+    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN', 'NegationGAT', 'ProjectMP'],
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
@@ -71,6 +71,8 @@ def add_train_args(parser: ArgumentParser):
                         help='number of heads for GAT')
     parser.add_argument('--finetune_from', type=str, default=None, 
                         help="model file to load weights from for finetuning")
+    parser.add_argument('--lift_file', type=str, default=None, 
+                        help="model file from which to load lift network")
 
     # Training parameters
     parser.add_argument('--lr', type=float, default=0.001,

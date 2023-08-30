@@ -39,7 +39,7 @@ def featurize_batch(args, batch):
     return x_in, edge_index, edge_weight
 
 # measure and return the validation loss
-def validate(args, model, val_loader):
+def validate(args, model, val_loader, criterion=None):
     loss_fn = get_loss_fn(args)
     score_fn = get_score_fn(args)
 

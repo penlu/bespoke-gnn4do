@@ -16,6 +16,7 @@ from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
 from model.saving import load_model
+from model.parsing import read_params_from_folder
 
 def construct_model(args):
     if args.problem_type == 'max_cut' and args.model_type == 'LiftMP':
@@ -29,6 +30,16 @@ def construct_model(args):
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
         )
+    elif args.problem_type == 'max_cut' and args.model_type == "ProjectMP":
+        # must have lift network to train.
+        assert args.lift_file is not None
+        model = MaxCutLiftProjectNetwork(
+          in_channels=args.rank,
+          num_layers_lift=args.num_layers - args.num_layers_project,
+          num_layers_project=args.num_layers_project,
+          lift_file=args.lift_file,
+        )
+
     elif args.model_type == 'GIN':
         model = GINLiftNetwork(args)
     elif args.model_type == 'GAT':
@@ -122,9 +133,33 @@ class MaxCutProjectNetwork(torch.nn.Module):
         return x
 
 class MaxCutLiftProjectNetwork(torch.nn.Module):
-    def __init__(self, in_channels, num_layers_lift, num_layers_project):
+    def __init__(self, in_channels, num_layers_lift, num_layers_project, lift_file=None):
         super().__init__()
-        self.lift_net = MaxCutLiftNetwork(in_channels, num_layers=num_layers_lift)
+
+        if lift_file is not None:
+            print(f"loading from {lift_file}")
+            # TODO: maybe check the lift arguments for consistency
+
+            # load lift file
+            class DotDict(dict):
+                def __getattr__(self, key):
+                    if key in self:
+                        return self[key]
+                    else:
+                        raise AttributeError(f"'DotDict' object has no attribute '{key}'")
+            self.lift_args = DotDict(read_params_from_folder(os.path.dirname(lift_file)))
+            self.lift_net, _ = construct_model(self.lift_args)
+            if self.lift_args.rank != in_channels:
+                raise ValueError(f"As of right now, lift_args rank ({self.lift_args.rank}) must \
+                                 equal the project network rank ({in_channels})")
+            self.lift_net = load_model(self.lift_net, lift_file)
+
+            # freeze it
+            for param in self.lift_net.parameters():
+                param.requires_grad = False
+            
+        else:
+            self.lift_net = MaxCutLiftNetwork(in_channels, num_layers=num_layers_lift)
         self.project_net = MaxCutProjectNetwork(in_channels, num_layers=num_layers_project)
 
     def forward(self, x, edge_index, edge_weight):
