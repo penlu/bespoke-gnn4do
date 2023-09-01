@@ -25,9 +25,51 @@ def max_cut_loss(X, edge_index):
     return obj
 
 def vertex_cover_loss(X, edge_index):
-    # taken from maxcut-80/loss/loss_vc.py::obj_vc_lift
-    raise NotImplementedError()
-    return obj
+    # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
+    #def get_obj_vc_new(graph_params, conv_vc, A, edge_index, interpolate=0.5, **vc_params):
+    '''calculates the stanadard relaxed loss with weights.
+    Input:
+    graph_params
+    conv_vc : the nn to be run
+    A: Adjacency matrix for vertex cover this is unweighted 
+    edge_index: 2xE adjacency list for MessagePassing
+
+    Returns: 
+    obj: loss
+    x : the output after application of the nn
+    
+    ''' 
+    N = X.shape[0]
+    A = to_torch_csr_tensor(edge_index, size=N)
+    x_lift = X
+    # TODO: fix weights, penalty
+    weights = torch.ones(N)
+    penalty = 2
+    
+    #lift adopts e1 = (1,0,...,0) as 1 
+    #\sum_{i \in [N]} w_i(1+x_i)/2
+    linear_lift = torch.inner(torch.ones(N) + x_lift[:,0], weights)/2
+    
+    #form penalty for constraints
+    xx_lift = torch.matmul(x_lift, torch.transpose(x_lift, 0, 1))
+    
+    #multiplying A by x[i,0] for row i
+    x_i_lift = x_lift[:,0].view(-1,1)
+    #multiplying A by x[j,0] for column j
+    x_j_lift = x_lift[:,0].view(1,-1)
+    A_i_lift = A*x_i_lift
+    A_j_lift = A*x_j_lift
+    #phi_left is matrix of dimension N by N for error per edge 
+    #phi_ij = 1 - <x_i + x_j,e_1> + <x_i,x_j> for (i,j) \in Edges
+    phi_lift = A - A_i_lift - A_j_lift + A*xx_lift
+    phi_square_lift = phi_lift ** 2
+    #division by 2 because phi_square is symmetric and overcounts by 2
+    #divison by 2 again because constant penalty/2 * phi^2
+    augment_lift = torch.sum(penalty*phi_square_lift)/4
+    #objective is augmented lagrangian 
+    obj_lift = linear_lift + augment_lift 
+    
+    return obj_lift
 
 def get_score_fn(args):
     if args.problem_type == 'max_cut':
