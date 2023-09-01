@@ -48,11 +48,7 @@ def vertex_cover_loss(X, edge_index):
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
 
-<<<<<<< HEAD
-    linear = torch.inner(torch.ones(N, device=X.device) + X[:, 0], weights) / 2.
-=======
     linear = torch.inner(torch.ones(N).to(X.device) + X[..., :, 0], weights) / 2.
->>>>>>> 0042dc688a294faa1bb4b6648fede4eb52af6780
 
     # now calculate penalty for uncovered edges
     XX = torch.matmul(X, torch.transpose(X, -1, -2))
