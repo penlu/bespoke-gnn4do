@@ -42,13 +42,13 @@ def vertex_cover_loss(X, edge_index):
     #A = to_torch_csr_tensor(edge_index, size=N)
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
     # TODO: fix weights, penalty
-    weights = torch.ones(N).to(X.device)
+    weights = torch.ones(N, device=X.device)
     penalty = 2
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
 
-    linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
+    linear = torch.inner(torch.ones(N, device=X.device) + X[:, 0], weights) / 2.
 
     # now calculate penalty for uncovered edges
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
@@ -94,5 +94,13 @@ def max_cut_score(args, X, example):
 
     return (E - obj) / 2., 0.
 
-def vertex_cover_score():
-    raise NotImplementedError()
+def vertex_cover_score(args, X, example):
+    # convert numpy array to torch tensor
+    if isinstance(X, np.ndarray):
+        X = torch.FloatTensor(X)
+    if len(X.shape) == 1:
+        X = X[:, None]
+    N = example.num_nodes
+    edge_index = example.edge_index.to(X.device)
+
+    return - vertex_cover_loss(X, edge_index)
