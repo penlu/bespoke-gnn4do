@@ -41,12 +41,15 @@ def vertex_cover_loss(X, edge_index):
     N = X.shape[0]
     A = to_torch_csr_tensor(edge_index, size=N)
     # TODO: fix weights, penalty
-    weights = torch.ones(N)
+    weights = torch.ones(N).to(X.device)
     penalty = 2
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
-    linear = torch.inner(torch.ones(N) + X[:, 0], weights) / 2.
+
+    from pdb import set_trace as bp
+    bp()
+    linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
 
     # now calculate penalty for uncovered edges
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
