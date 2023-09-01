@@ -83,6 +83,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Run validation every N steps/epochs (0 to never run validation)')
     parser.add_argument('--save_freq', type=int, default=0,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
+    parser.add_argument('--vc_penalty', type=float, default=None,
+                        help='Penalty for failed cover in vertex cover')
 
     parser.add_argument('--stepwise', type=bool, default=True,
                         help='Train by number of gradient steps or number of epochs?')
@@ -152,6 +154,10 @@ def parse_train_args() -> Namespace:
     add_dataset_args(parser)
     args = parser.parse_args()
     modify_train_args(args)
+
+    # TODO: checks in a separate function?
+    if args.vc_penalty is not None and args.problem_type != 'vertex_cover':
+        raise ValueError(f"vc_penalty set for problem {args.problem_type}")
 
     return args
 

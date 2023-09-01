@@ -6,12 +6,13 @@ import time
 import torch
 import torch.nn.functional as F
 from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_tensor
+from functools import partial
 
 def get_loss_fn(args):
     if args.problem_type == 'max_cut':
         return max_cut_loss
     elif args.problem_type == 'vertex_cover':
-        return vertex_cover_loss
+        return partial(vertex_cover_loss, penalty = args.vc_penalty)
     elif args.problem_type == 'max_clique':
         raise NotImplementedError('max_clique loss not yet implemented')
 
@@ -24,7 +25,7 @@ def max_cut_loss(X, edge_index):
 
     return obj
 
-def vertex_cover_loss(X, edge_index):
+def vertex_cover_loss(X, edge_index, penalty=2):
     # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
     #def get_obj_vc_new(graph_params, conv_vc, A, edge_index, interpolate=0.5, **vc_params):
     '''calculates the stanadard relaxed loss with weights.
