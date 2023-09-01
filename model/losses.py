@@ -42,9 +42,8 @@ def vertex_cover_loss(X, edge_index, penalty=2):
     N = X.shape[0]
     #A = to_torch_csr_tensor(edge_index, size=N)
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
-    # TODO: fix weights, penalty
+    # TODO: fix weights
     weights = torch.ones(N, device=X.device)
-    penalty = 2
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
