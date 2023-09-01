@@ -39,7 +39,8 @@ def vertex_cover_loss(X, edge_index):
     x : the output after application of the nn
     '''
     N = X.shape[0]
-    A = to_torch_csr_tensor(edge_index, size=N)
+    #A = to_torch_csr_tensor(edge_index, size=N)
+    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
     # TODO: fix weights, penalty
     weights = torch.ones(N).to(X.device)
     penalty = 2
@@ -48,7 +49,7 @@ def vertex_cover_loss(X, edge_index):
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
 
     from pdb import set_trace as bp
-    bp()
+    #bp()
     linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
 
     # now calculate penalty for uncovered edges
@@ -60,13 +61,10 @@ def vertex_cover_loss(X, edge_index):
     # multiply each column j of A by X[j, 0]
     x_j = X[:, 0].view(1,-1) # (1, N)
 
-    # (x_i + x_j)_{ij} = <x_i + x_j, e1> if ij is an edge, otherwise 0
-    x_ij = x_i + x_j
-
     # phi is matrix of dimension N by N for error per edge
     # phi_ij = 1 - <x_i + x_j,e_1> + <x_i,x_j> for (i,j) \in Edges
-    phi = A - A.dot(x_i + x_j) + A * XX
-    phi_square = phi ** 2
+    phi = A * (torch.ones((N, N)).to(X.device) - x_i - x_j + XX)
+    phi_square = phi * phi
     # division by 2 because phi_square is symmetric and overcounts by 2
     # divison by 2 again because constant penalty/2 * phi^2
     augment = penalty * torch.sum(phi_square) / 4.
