@@ -44,18 +44,19 @@ def vertex_cover_loss(X, edge_index):
     # TODO: fix weights, penalty
     weights = torch.ones(N)
     penalty = 2
-    
+
     #lift adopts e1 = (1,0,...,0) as 1 
     #\sum_{i \in [N]} w_i(1+x_i)/2
-    linear = torch.inner(torch.ones(N) + X[:,0], weights)/2
-    
+    linear = torch.inner(torch.ones(N) + X[:, 0], weights) / 2.
+
     #form penalty for constraints
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    
+
     #multiplying A by x[i,0] for row i
-    x_i = X[:,0].view(-1,1)
+    x_i = X[:, 0].view(-1,1)
     #multiplying A by x[j,0] for column j
-    x_j = X[:,0].view(1,-1)
+    x_j = X[:, 0].view(1,-1)
+
     A_i = A*x_i
     A_j = A*x_j
     #phi_left is matrix of dimension N by N for error per edge
@@ -64,7 +65,7 @@ def vertex_cover_loss(X, edge_index):
     phi_square = phi ** 2
     #division by 2 because phi_square is symmetric and overcounts by 2
     #divison by 2 again because constant penalty/2 * phi^2
-    augment = torch.sum(penalty*phi_square)/4
+    augment = penalty * torch.sum(phi_square) / 4.
     #objective is augmented lagrangian 
     obj = linear + augment 
     
