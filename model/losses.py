@@ -61,7 +61,7 @@ def vertex_cover_loss(X, edge_index):
 
     # phi is matrix of dimension N by N for error per edge
     # phi_ij = 1 - <x_i + x_j,e_1> + <x_i,x_j> for (i,j) \in Edges
-    phi = A * (torch.ones((N, N)).to(X.device) - x_i - x_j + XX)
+    phi = A - A * (x_i + x_j) + A * XX
     phi_square = phi * phi
     # division by 2 because phi_square is symmetric and overcounts by 2
     # divison by 2 again because constant penalty/2 * phi^2
