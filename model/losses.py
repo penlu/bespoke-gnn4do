@@ -19,8 +19,8 @@ def get_loss_fn(args):
 def max_cut_loss(X, edge_index):
     # compute loss
     A = to_torch_csr_tensor(edge_index, size=X.shape[0])
-    XX = torch.matmul(X, torch.transpose(X, -1, -2))
-    obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    obj = torch.trace(torch.matmul(A, XX)) / 2.
 
     return obj
 
@@ -48,13 +48,13 @@ def vertex_cover_loss(X, edge_index):
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
 
-    linear = torch.inner(torch.ones(N).to(X.device) + X[..., :, 0], weights) / 2.
+    linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
 
     # now calculate penalty for uncovered edges
-    XX = torch.matmul(X, torch.transpose(X, -1, -2))
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
 
-    x_i = X[..., :, 0, None] # (b, N, 1)
-    x_j = torch.transpose(x_i, -1, -2) # (b, 1, N)
+    x_i = X[:, 0].view(-1, 1) # (N, 1)
+    x_j = torch.transpose(x_i, 0, 1) # (1, N)
 
     # phi is matrix of dimension N by N for error per edge
     # phi_ij = 1 - <x_i + x_j,e_1> + <x_i,x_j> for (i,j) \in Edges
@@ -86,8 +86,8 @@ def max_cut_score(args, X, example):
     edge_index = example.edge_index.to(X.device)
     A = to_torch_csr_tensor(edge_index, size=N)
     E = edge_index.shape[1]
-    XX = torch.matmul(X, torch.transpose(X, -1, -2))
-    obj = torch.matmul(A, XX).diagonal(dim1=-1, dim2=-2).sum(-1) / 2.
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    obj = torch.trace(torch.matmul(A, XX)) / 2.
 
     return (E - obj) / 2., 0.
 
