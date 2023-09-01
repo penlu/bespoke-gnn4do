@@ -94,7 +94,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     hyper = F.normalize(hyper)
     x_proj = torch.matmul(hyper, x_lift.t())
     x_int = torch.sign(x_proj)[:, :, None]
-    scores, penalties = torch.vmap(lambda x: score_fn(args, x, example))(x_int)
+    scores = torch.vmap(lambda x: score_fn(args, x, example))(x_int)
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
     return out

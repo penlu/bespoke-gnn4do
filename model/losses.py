@@ -89,7 +89,7 @@ def max_cut_score(args, X, example):
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
     obj = torch.trace(torch.matmul(A, XX)) / 2.
 
-    return (E - obj) / 2., 0.
+    return (E - obj) / 2.
 
 def vertex_cover_score(args, X, example):
     # convert numpy array to torch tensor
