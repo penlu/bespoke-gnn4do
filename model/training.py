@@ -55,7 +55,7 @@ def validate(args, model, val_loader, criterion=None):
                 total_loss += loss.cpu().detach().numpy()
 
                 x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
-                score, penalty = score_fn(args, x_proj, example)
+                score = score_fn(args, x_proj, example)
                 total_score += score.cpu().detach().numpy()
 
                 total_count += 1
