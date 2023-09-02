@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_geometric.utils import to_dense_adj, to_torch_csr_tensor
+import networkx as nx
+
 
 def max_cut_sdp(args, example):
     N = example.num_nodes
@@ -146,3 +148,29 @@ def max_cut_gurobi(args, example):
             return max_cut_gurobi(args, example)
 
     return x_vals
+
+def vertex_cover_gurobi(args, example):
+    nx_complement = nx.operators.complement(example)
+    x_vars = {}
+    m = gp.Model("mip1")
+    m.params.OutputFlag=0
+
+    if args.gurobi_timeout:
+        m.params.TimeLimit = args.gurobi_timeout
+
+    for node in nx_complement.nodes():
+        x_vars['x_'+str(node)] = m.addVar(vtype=GRB.BINARY, name="x_"+str(node))
+
+    count_edges = 0
+    for edge in nx_complement.edges():
+        m.addConstr(x_vars['x_'+str(edge[0])] + x_vars['x_'+str(edge[1])] >= 1,'c_'+str(count_edges))
+        count_edges+=1
+    m.setObjective(sum([x_vars['x_'+str(node)] for node in nx_complement.nodes()]), GRB.MINIMIZE);
+
+    # Optimize model
+    m.optimize();
+
+    set_size = m.objVal;
+    x_vals = [var.x for var in m.getVars()] 
+
+    return set_size, x_vals

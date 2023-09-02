@@ -8,7 +8,7 @@ import torch
 from data.loader import construct_dataset
 from model.losses import max_cut_score, vertex_cover_score
 from model.parsing import parse_baseline_args
-from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_greedy, max_cut_gurobi
+from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_greedy, max_cut_gurobi, vertex_cover_gurobi
 from utils.baselines import vertex_cover_sdp, vertex_cover_bm, vertex_cover_greedy
 from utils.baselines import e1_projector, random_hyperplane_projector
 
