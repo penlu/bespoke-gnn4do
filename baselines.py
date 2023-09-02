@@ -35,7 +35,7 @@ if __name__ == '__main__':
         score_fn = max_cut_score
     elif args.problem_type == 'vertex_cover':
         lift_fns = {
-          #'sdp': vertex_cover_sdp,
+          'sdp': vertex_cover_sdp,
           #'bm': vertex_cover_bm,
         }
         greedy_fn = vertex_cover_greedy
@@ -56,13 +56,14 @@ if __name__ == '__main__':
         for lift_name, lift_fn in lift_fns.items():
             # calculate lift output and save score
             x_lift = torch.FloatTensor(lift_fn(args, example))
-            lift_score, lift_penalty = score_fn(args, x_lift, example)
+            # NOTE: no penalty in return
+            lift_score = score_fn(args, x_lift, example)
             res = {
                 'index': i,
                 'method': lift_name,
                 'type': 'lift',
                 'score': float(lift_score),
-                'penalty': float(lift_penalty),
+                #'penalty': float(lift_penalty),
                 'x': x_lift.tolist(),
             }
             outfile.write(json.dumps(res) + '\n')
@@ -71,14 +72,17 @@ if __name__ == '__main__':
 
             # now use each project method and save scores
             for project_name, project_fn in project_fns.items():
+                from pdb import set_trace as bp
+                #bp() 
                 x_project = torch.FloatTensor(project_fn(args, x_lift, example, score_fn))
-                project_score, project_penalty = score_fn(args, x_project, example)
+                # NOTE: no penalty in return
+                project_score = score_fn(args, x_project, example)
                 res = {
                     'index': i,
                     'method': f"{lift_name}|{project_name}",
                     'type': 'lift_project',
                     'score': float(project_score),
-                    'penalty': float(project_penalty),
+                    #'penalty': float(project_penalty),
                     'x': x_project.tolist(),
                 }
                 outfile.write(json.dumps(res) + '\n')

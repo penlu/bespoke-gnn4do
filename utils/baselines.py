@@ -67,6 +67,8 @@ def max_cut_autograd():
     pass # TODO
 
 def vertex_cover_sdp(args, example):
+    # from /maxcut-80/vertex_cover/vc_sdp.ipynb::vc_sdp
+
     # Define the variable representing the relaxed vertex cover solution
     #A,weights
     N = example.num_nodes
@@ -75,10 +77,12 @@ def vertex_cover_sdp(args, example):
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     X = cp.Variable((N+1, N+1), PSD=True)
-    weight_mat = np.zeros((N+1,N+1))
-    for i in range(N):
-        #note the indexing is from [1,N]
-        weight_mat[0,i+1] = weights[i]
+    # TODO weights?
+    weight_mat = np.ones((N+1,N+1))
+    weights = np.ones(N)
+    #for i in range(N):
+    #    #note the indexing is from [1,N]
+    #    weight_mat[0,i+1] = weights[i]
 
     # Objective function (minimize trace of X)
     objective = cp.Minimize(cp.sum(cp.multiply(weight_mat,X)))
@@ -98,10 +102,12 @@ def vertex_cover_sdp(args, example):
 
     obj = problem.value
 
-    frac_obj = 0.5*(np.sum(weights) + obj) 
+    frac_obj = 0.5*(N + obj) 
     #print('relaxed objective: ', obj)
     # Retrieve the optimal solution
     X_out = X.value
+    #from pdb import set_trace as bp
+    #bp()
 
     marginals = X_out[0,1:N+1]
     integral = np.sign(marginals)
@@ -110,7 +116,7 @@ def vertex_cover_sdp(args, example):
     #print("marginals:", marginals)
     #print('sdp vertex cover: ', int_obj)
     
-    return int_obj,frac_obj
+    return X_out #int_obj,frac_obj
 
 def vertex_cover_bm():
     pass # TODO
@@ -147,10 +153,10 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
 def max_cut_greedy(args, x_proj, example, score_fn):
     pass # TODO
 
-def vertex_cover_greedy(args, x_proj, example, score_fn):
-    #def vc_greedy(A,warm_start = None, iterations=100, weights=None):
+def vertex_cover_greedy(A, warm_start=None, iterations=100, weights=None):
+    # from /maxcut-80/vertex_cover/vc_sdp.ipynb::vc_greedy
     #start = np.random.bernoulli(N)
-    N,_ = A.shape
+    N , _ = A.shape
     if weights is None:
         weights = np.ones(N)
         
@@ -170,7 +176,6 @@ def vertex_cover_greedy(args, x_proj, example, score_fn):
                 start[i] = 0
             if not all_ones and start[i] == 0:
                 start[i] = 1
-    #print('vertex cover: ', np.sum(start))
     return np.inner(weights,start)
 
 def max_cut_gurobi(args, example):
