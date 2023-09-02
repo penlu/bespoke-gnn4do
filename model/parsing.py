@@ -219,7 +219,7 @@ def parse_baseline_args() -> Namespace:
                         help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
     parser.add_argument('--gurobi', type=bool, default=False,
                         help='Run Gurobi')
-    parser.add_argument('--gurobi_timeout', type=float,
+    parser.add_argument('--gurobi_timeout', type=float, default=5,
                         help='Timeout for Gurobi if desired')
 
     # TODO argument to control list of baselines to run?

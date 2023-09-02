@@ -35,8 +35,8 @@ if __name__ == '__main__':
         score_fn = max_cut_score
     elif args.problem_type == 'vertex_cover':
         lift_fns = {
-          'sdp': vertex_cover_sdp,
-          'bm': vertex_cover_bm,
+          #'sdp': vertex_cover_sdp,
+          #'bm': vertex_cover_bm,
         }
         greedy_fn = vertex_cover_greedy
         score_fn = vertex_cover_score
@@ -89,10 +89,14 @@ if __name__ == '__main__':
         if args.gurobi:
             if args.problem_type == 'max_cut':
                 x_gurobi = max_cut_gurobi(args, example)
-                gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
+                # TODO: there's no gurobi_penalty here anymore?
+                # gurobi_penalty = None
+                gurobi_score = score_fn(args, x_gurobi, example)
             elif args.problem_type == 'vertex_cover':
-                x_gurobi = vertex_cover_gurobi(args, example)
-                gurobi_score, gurobi_penalty = score_fn(args, x_gurobi, example)
+                set_size, x_gurobi = vertex_cover_gurobi(args, example)
+                # TODO: there's no gurobi_penalty here anymore?
+                # gurobi_penalty = None
+                gurobi_score = score_fn(args, x_gurobi, example)
             elif args.problem_type == 'max_clique':
                 raise NotImplementedError(f"max_clique baselines not yet implemented")
             else:
@@ -104,7 +108,7 @@ if __name__ == '__main__':
                 'method': 'gurobi',
                 'type': 'solver',
                 'score': float(gurobi_score),
-                'penalty': float(gurobi_penalty),
+                #'penalty': float(gurobi_penalty),
                 'x': x_gurobi.tolist(),
             }
             outfile.write(json.dumps(res) + '\n')
