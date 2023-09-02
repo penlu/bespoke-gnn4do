@@ -68,12 +68,9 @@ def max_cut_autograd():
 
 def vertex_cover_sdp(args, example):
     # from /maxcut-80/vertex_cover/vc_sdp.ipynb::vc_sdp
-
     # Define the variable representing the relaxed vertex cover solution
-    #A,weights
     N = example.num_nodes
     edge_index = example.edge_index
-    #E = edge_index.shape[1]
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
 
@@ -81,13 +78,6 @@ def vertex_cover_sdp(args, example):
     # TODO weights?
     weight_mat = np.zeros((N+1,N+1))
     weight_mat[0,1:N+1] = 1
-
-    from pdb import set_trace as bp
-    #bp()
-    #weights = np.ones(N)
-    #for i in range(N):
-    #    #note the indexing is from [1,N]
-    #    weight_mat[0,i+1] = weights[i]
 
     # Objective function (minimize trace of X)
     objective = cp.Minimize(cp.sum(cp.multiply(weight_mat,X)))
@@ -105,37 +95,20 @@ def vertex_cover_sdp(args, example):
     problem = cp.Problem(objective, constraints)
     problem.solve(solver=cp.SCS)
 
-    obj = problem.value
-
-    #frac_obj = 0.5*(N + obj) 
-    #print('relaxed objective: ', obj)
-    # Retrieve the optimal solution
     X = X.value
-    #from pdb import set_trace as bp
-    #bp()
 
-    #marginals = X_out[0,1:N+1]
-    #integral = np.sign(marginals)
-    # Print the vertex cover
-    #int_obj = vertex_cover_greedy(A, warm_start=integral,weights=weights)
-    #print("marginals:", marginals)
-    #print('sdp vertex cover: ', int_obj)
+    # NOTE: removed calculations for int_obj, obj, frac_obj, etc
     
-    (eigenval, eigenvec) = np.linalg.eig(X)
-    #print('Eigenvalues--Note how sparse they are:', eigenval)
-
+    eigenval, _  = np.linalg.eig(X)
     # ensure eigenvalues are positive
     # pad by .001 for precision issues with cholesky decomposition
     if np.min(eigenval) < 0:
         X = X + (0.001 - np.min(eigenval)) * np.eye(N+1)
     V = np.linalg.cholesky(X)
 
-    from pdb import set_trace as bp
-    #bp()
-
     V = V[1:N+1,:]
 
-    return V #int_obj,frac_obj
+    return V
 
 def vertex_cover_bm():
     pass # TODO
