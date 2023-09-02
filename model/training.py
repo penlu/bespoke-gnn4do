@@ -36,7 +36,8 @@ def featurize_batch(args, batch):
     # TODO later, a more robust attribute system
     num_edges = edge_index.shape[1]
     edge_weight = torch.ones(num_edges, device=args.device)
-    return x_in, edge_index, edge_weight
+    node_weight = torch.ones(N, device=args.device)
+    return x_in, edge_index, edge_weight, node_weight
 
 # measure and return the validation loss
 def validate(args, model, val_loader, criterion=None):
@@ -49,8 +50,14 @@ def validate(args, model, val_loader, criterion=None):
     with torch.no_grad():
         for batch in val_loader:
             for example in batch.to_data_list():
-                x_in, edge_index, edge_weight = featurize_batch(args, example)
-                x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weight)
+                x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
+                x_out = model(
+                  x=x_in,
+                  edge_index=edge_index,
+                  edge_weight=edge_weight,
+                  node_weight=node_weight,
+                  vc_penalty=args.vc_penalty
+                )
                 loss = loss_fn(x_out, edge_index)
                 total_loss += loss.cpu().detach().numpy()
 
@@ -88,8 +95,13 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
 
         for batch in train_loader:
             # run the model
-            x_in, edge_index, edge_weight = featurize_batch(args, batch)
-            x_out = model(x=x_in, edge_index=edge_index, edge_weight=edge_weight)
+            x_in, edge_index, edge_weight, node_weight = featurize_batch(args, batch)
+            x_out = model(x=x_in,
+              edge_index=edge_index,
+              edge_weight=edge_weight,
+              node_weight=node_weight,
+              vc_penalty=args.vc_penalty
+            )
 
             # get objective
             loss = criterion(x_out, edge_index)
