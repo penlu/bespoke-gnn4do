@@ -76,10 +76,15 @@ def vertex_cover_sdp(args, example):
     #E = edge_index.shape[1]
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
+
     X = cp.Variable((N+1, N+1), PSD=True)
     # TODO weights?
-    weight_mat = np.ones((N+1,N+1))
-    weights = np.ones(N)
+    weight_mat = np.zeros((N+1,N+1))
+    weight_mat[0,1:N+1] = 1
+
+    from pdb import set_trace as bp
+    #bp()
+    #weights = np.ones(N)
     #for i in range(N):
     #    #note the indexing is from [1,N]
     #    weight_mat[0,i+1] = weights[i]
@@ -102,21 +107,35 @@ def vertex_cover_sdp(args, example):
 
     obj = problem.value
 
-    frac_obj = 0.5*(N + obj) 
+    #frac_obj = 0.5*(N + obj) 
     #print('relaxed objective: ', obj)
     # Retrieve the optimal solution
-    X_out = X.value
+    X = X.value
     #from pdb import set_trace as bp
     #bp()
 
-    marginals = X_out[0,1:N+1]
-    integral = np.sign(marginals)
+    #marginals = X_out[0,1:N+1]
+    #integral = np.sign(marginals)
     # Print the vertex cover
-    int_obj = vertex_cover_greedy(A, warm_start=integral,weights=weights)
+    #int_obj = vertex_cover_greedy(A, warm_start=integral,weights=weights)
     #print("marginals:", marginals)
     #print('sdp vertex cover: ', int_obj)
     
-    return X_out #int_obj,frac_obj
+    (eigenval, eigenvec) = np.linalg.eig(X)
+    #print('Eigenvalues--Note how sparse they are:', eigenval)
+
+    # ensure eigenvalues are positive
+    # pad by .001 for precision issues with cholesky decomposition
+    if np.min(eigenval) < 0:
+        X = X + (0.001 - np.min(eigenval)) * np.eye(N+1)
+    V = np.linalg.cholesky(X)
+
+    from pdb import set_trace as bp
+    #bp()
+
+    V = V[1:N+1,:]
+
+    return V #int_obj,frac_obj
 
 def vertex_cover_bm():
     pass # TODO
