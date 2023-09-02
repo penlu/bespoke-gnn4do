@@ -150,7 +150,7 @@ def max_cut_gurobi(args, example):
     return x_vals
 
 def vertex_cover_gurobi(args, example):
-    nx_complement = nx.operators.complement(to_networkx(example))
+    nx_complement = to_networkx(example) # nx.operators.complement()
     x_vars = {}
     m = gp.Model("mip1")
     m.params.OutputFlag=0
@@ -171,6 +171,6 @@ def vertex_cover_gurobi(args, example):
     m.optimize();
 
     set_size = m.objVal;
-    x_vals = np.array([var.x for var in m.getVars()])
+    x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
 
     return set_size, x_vals
