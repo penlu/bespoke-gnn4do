@@ -66,8 +66,51 @@ def max_cut_bm():
 def max_cut_autograd():
     pass # TODO
 
-def vertex_cover_sdp():
-    pass # TODO
+def vertex_cover_sdp(args, example):
+    # Define the variable representing the relaxed vertex cover solution
+    #A,weights
+    N = example.num_nodes
+    edge_index = example.edge_index
+    #E = edge_index.shape[1]
+    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
+
+    X = cp.Variable((N+1, N+1), PSD=True)
+    weight_mat = np.zeros((N+1,N+1))
+    for i in range(N):
+        #note the indexing is from [1,N]
+        weight_mat[0,i+1] = weights[i]
+
+    # Objective function (minimize trace of X)
+    objective = cp.Minimize(cp.sum(cp.multiply(weight_mat,X)))
+
+    # Constraints: X is a positive semidefinite matrix
+    constraints = [X >> 0]
+
+    # Constraints: diagonal elements of X are 1
+    constraints += [cp.diag(X) == 1]
+
+    # Constraints: for each edge (i, j) one must be nonzero, note the indexing is (i,j) in A
+    constraints += [1 - X[0, i+1] - X[0,j+1] + X[i+1,j+1] == 0 for i in range(N) for j in range(N) if A[i, j] == 1]
+
+    # Create the problem and solve it
+    problem = cp.Problem(objective, constraints)
+    problem.solve(solver=cp.SCS)
+
+    obj = problem.value
+
+    frac_obj = 0.5*(np.sum(weights) + obj) 
+    #print('relaxed objective: ', obj)
+    # Retrieve the optimal solution
+    X_out = X.value
+
+    marginals = X_out[0,1:N+1]
+    integral = np.sign(marginals)
+    # Print the vertex cover
+    int_obj = vertex_cover_greedy(A, warm_start=integral,weights=weights)
+    #print("marginals:", marginals)
+    #print('sdp vertex cover: ', int_obj)
+    
+    return int_obj,frac_obj
 
 def vertex_cover_bm():
     pass # TODO
@@ -105,7 +148,30 @@ def max_cut_greedy(args, x_proj, example, score_fn):
     pass # TODO
 
 def vertex_cover_greedy(args, x_proj, example, score_fn):
-    pass # TODO
+    #def vc_greedy(A,warm_start = None, iterations=100, weights=None):
+    #start = np.random.bernoulli(N)
+    N,_ = A.shape
+    if weights is None:
+        weights = np.ones(N)
+        
+    if warm_start is None:
+        start = np.ones(N)
+    else: 
+        start = warm_start
+    for it in range(iterations):
+        for i in range(N):
+            all_ones = True
+            for j in range(N):
+                if A[i,j] == 0:
+                    continue
+                if A[i,j] == 1 and start[j] == 0:
+                    all_ones = False
+            if all_ones and weights[i] > 0:
+                start[i] = 0
+            if not all_ones and start[i] == 0:
+                start[i] = 1
+    #print('vertex cover: ', np.sum(start))
+    return np.inner(weights,start)
 
 def max_cut_gurobi(args, example):
     # Create a new model
