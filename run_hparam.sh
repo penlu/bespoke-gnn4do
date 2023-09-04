@@ -19,7 +19,7 @@ run_job () {
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
         --stepwise=True --steps=50000 \
         --valid_freq=100 --dropout=0 \
-        --prefix=230904_hparam_test \
+        --prefix=230904_hparam_att1 \
         --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE \
         --num_layers=$LIFT_LAYERS --rank=$R --vc_penalty=$PENALTY --problem_type=vertex_cover
 }
