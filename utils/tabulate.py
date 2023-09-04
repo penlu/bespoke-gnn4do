@@ -5,6 +5,9 @@ import numpy as np
 import sys
 from pathlib import Path
 
+from torch_geometric.datasets import TUDataset
+from torch_geometric.loader import DataLoader
+
 from data.loader import RandomGraphDataset
 
 # Utils for making pandas dataframe tables
@@ -51,7 +54,7 @@ def load_train_outputs(path, prefix):
     return outputs
 
 # Collect baseline outputs
-def load_baseline_outputs(path, prefix, method):
+def load_baseline_outputs(path, prefix, method, indices=None):
     folder_list = [path / x for x in os.listdir(path) if x.startswith(prefix)]
 
     # load in params
@@ -70,8 +73,8 @@ def load_baseline_outputs(path, prefix, method):
                 count = 0
                 for line in f:
                     res = json.loads(line)
-                    # TODO only do this if the graph is in the validation set
-                    if res['method'] == method:
+                    # second condition is: only do this if the graph is in the validation set
+                    if res['method'] == method and (indices == None or res['index'] in indices[dataset]):
                         total_score += res['score']
                         count += 1
 
