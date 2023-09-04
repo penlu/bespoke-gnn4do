@@ -149,7 +149,7 @@ def construct_dataset(args):
 
     transform = None
     if args.positional_encoding == 'laplacian_eigenvector':
-        assert args.pe_dimension < args.rank
+        assert args.pe_dimension <= args.rank
         assert args.pe_dimension <= 8 # for now, this is our maximum
     elif args.positional_encoding == 'random_walk':
         assert args.pe_dimension < args.rank
