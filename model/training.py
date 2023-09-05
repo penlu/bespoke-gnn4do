@@ -124,10 +124,12 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
             if args.stepwise:
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
+                    valid_start_time = time.time()
                     valid_loss, valid_score = validate(args, model, val_loader)
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
-                    print(f"  VALIDATION steps={steps} valid_loss={valid_loss} valid_score={valid_score}")
+                    valid_time = time.time() - valid_start_time
+                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} valid_loss={valid_loss} valid_score={valid_score}")
 
                 # check if training is done
                 if steps >= args.steps:
@@ -148,10 +150,12 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
         if not args.stepwise:
             # occasionally run validation
             if args.valid_freq != 0 and ep % args.valid_freq == 0:
+                valid_start_time = time.time()
                 valid_loss, valid_score = validate(args, model, val_loader)
                 valid_losses.append(valid_loss)
                 valid_scores.append(valid_score)
-                print(f"  VALIDATION epoch={ep} steps={steps} valid_loss={valid_loss} valid_score={valid_score}")
+                valid_time = time.time() - valid_start_time
+                print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} valid_loss={valid_loss} valid_score={valid_score}")
 
             # occasionally save model
             if args.save_freq != 0 and ep % args.save_freq == 0:
