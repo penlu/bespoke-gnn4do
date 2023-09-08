@@ -158,14 +158,14 @@ def construct_dataset(args):
         raise ValueError(f"Invalid positional encoding passed into construct_loaders: {args.positional_encoding}")
 
     if args.dataset == 'RANDOM':
-        dataset = RandomGraphDataset(root='/tmp/random',
+        dataset = RandomGraphDataset(root='datasets/random',
                     num_graphs=args.num_graphs,
                     num_nodes_per_graph=args.num_nodes_per_graph,
                     edge_probability=args.edge_probability,
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'TU':
-        dataset = TUDataset(root=f'/tmp',
+        dataset = TUDataset(root=f'datasets',
                     name=args.TUdataset_name,
                     pre_transform=pre_transform,
                     transform=transform)
