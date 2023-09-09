@@ -67,6 +67,7 @@ if __name__ == '__main__':
                 'x': x_lift.tolist(),
             }
             outfile.write(json.dumps(res) + '\n')
+            outfile.flush()
             results.append(res)
             print(f"Lift method {lift_name} fractional score {lift_score}")
 
@@ -86,6 +87,7 @@ if __name__ == '__main__':
                     'x': x_project.tolist(),
                 }
                 outfile.write(json.dumps(res) + '\n')
+                outfile.flush()
                 results.append(res)
                 print(f"  Project method {project_name} integral score {project_score}")
 
@@ -116,6 +118,7 @@ if __name__ == '__main__':
                 'x': x_gurobi.tolist(),
             }
             outfile.write(json.dumps(res) + '\n')
+            outfile.flush()
             results.append(res)
 
     # TODO print some summary statistics
