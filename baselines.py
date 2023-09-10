@@ -26,18 +26,16 @@ if __name__ == '__main__':
     # get data
     dataset = construct_dataset(args)
 
+    lift_fns = {}
     if args.problem_type == 'max_cut':
-        lift_fns = {
-          'sdp': max_cut_sdp,
-          #'bm': max_cut_bm,
-        }
+        if args.sdp:
+            lift_fns['sdp'] = max_cut_sdp
+            #'bm': max_cut_bm,
         greedy_fn = max_cut_greedy
         score_fn = max_cut_score
     elif args.problem_type == 'vertex_cover':
-        lift_fns = {
-          'sdp': vertex_cover_sdp,
-          #'bm': vertex_cover_bm,
-        }
+        if args.sdp:
+            lift_fns['sdp'] = vertex_cover_sdp
         greedy_fn = vertex_cover_greedy
         score_fn = vertex_cover_score
     elif args.problem_type == 'max_clique':
@@ -52,6 +50,12 @@ if __name__ == '__main__':
 
     results = []
     for (i, example) in enumerate(dataset):
+        if args.start_index is not None and i < args.start_index:
+            continue
+
+        if args.end_index is not None and i >= args.end_index:
+            break
+
         # we'll run each pair of lift method and project method
         for lift_name, lift_fn in lift_fns.items():
             # calculate lift output and save score
@@ -73,8 +77,6 @@ if __name__ == '__main__':
 
             # now use each project method and save scores
             for project_name, project_fn in project_fns.items():
-                from pdb import set_trace as bp
-                #bp() 
                 x_project = torch.FloatTensor(project_fn(args, x_lift, example, score_fn))
                 # NOTE: no penalty in return
                 project_score = score_fn(args, x_project, example)

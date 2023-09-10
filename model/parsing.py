@@ -215,12 +215,17 @@ def parse_baseline_args() -> Namespace:
     parser = ArgumentParser()
     add_general_args(parser)
     add_dataset_args(parser)
-    parser.add_argument('--rank', type=int, default=32,
-                        help='How many dimensions for the vectors at each node, i.e. what rank is the solution matrix?')
+    parser.add_argument('--sdp', type=bool, default=True,
+                        help='Run SDP')
     parser.add_argument('--gurobi', type=bool, default=False,
                         help='Run Gurobi')
     parser.add_argument('--gurobi_timeout', type=float, default=5,
                         help='Timeout for Gurobi if desired')
+
+    parser.add_argument('--start_index', type=int, default=None,
+                        help='Start index in dataset, for partial runs (only run i >= start_index)')
+    parser.add_argument('--end_index', type=int, default=None,
+                        help='End index in dataset, for partial runs (only run i < end_index)')
 
     # TODO argument to control list of baselines to run?
 
