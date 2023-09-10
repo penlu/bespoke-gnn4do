@@ -6,7 +6,7 @@ import os
 import torch
 
 from data.loader import construct_dataset
-from model.losses import max_cut_score, vertex_cover_score
+from model.losses import max_cut_score, vertex_cover_score, max_clique_score
 from model.parsing import parse_baseline_args
 from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_greedy, max_cut_gurobi, vertex_cover_gurobi
 from utils.baselines import vertex_cover_sdp, vertex_cover_bm, vertex_cover_greedy
@@ -39,7 +39,10 @@ if __name__ == '__main__':
         greedy_fn = vertex_cover_greedy
         score_fn = vertex_cover_score
     elif args.problem_type == 'max_clique':
-        raise NotImplementedError(f"max_clique baselines not yet implemented")
+        if args.sdp:
+            lift_fns['sdp'] = vertex_cover_sdp
+        greedy_fn = vertex_cover_greedy
+        score_fn = max_clique_score
     else:
         raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
 
@@ -55,6 +58,12 @@ if __name__ == '__main__':
 
         if args.end_index is not None and i >= args.end_index:
             break
+
+        # we do max clique by running VC on graph complement
+        if args.problem_type == 'max_clique':
+            nx_graph = to_networkx(example)
+            nx_complement = nx.operators.complement(nx_graph)
+            example = from_networkx(nx_complement)
 
         # we'll run each pair of lift method and project method
         for lift_name, lift_fn in lift_fns.items():
@@ -106,7 +115,11 @@ if __name__ == '__main__':
                 # gurobi_penalty = None
                 gurobi_score = score_fn(args, x_gurobi, example)
             elif args.problem_type == 'max_clique':
-                raise NotImplementedError(f"max_clique baselines not yet implemented")
+                # we do max clique by running VC on graph complement
+                set_size, x_gurobi = vertex_cover_gurobi(args, example)
+                # TODO: there's no gurobi_penalty here anymore?
+                # gurobi_penalty = None
+                gurobi_score = score_fn(args, x_gurobi, example)
             else:
                 raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
             print(f"Gurobi integral score {gurobi_score}")
