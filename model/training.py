@@ -1,9 +1,11 @@
+import networkx as nx
 import numpy as np
 import os
 import time
 
 import torch
 import torch.nn.functional as F
+from torch_geometric.utils.convert import from_networkx, to_networkx
 
 from model.saving import save_model
 from model.losses import get_loss_fn, get_score_fn
@@ -11,7 +13,7 @@ from utils.baselines import random_hyperplane_projector
 
 def featurize_batch(args, batch):
     N = batch.num_nodes
-    edge_index = batch.edge_index.to(args.device)
+    num_edges = batch.edge_index.shape[1]
 
     if args.positional_encoding is None:
         # generate random vector input
@@ -32,11 +34,17 @@ def featurize_batch(args, batch):
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
 
-    # run model
+    # we do max clique by running VC on graph complement
+    if args.problem_type == 'max_clique':
+        nx_graph = to_networkx(batch)
+        nx_complement = nx.operators.complement(nx_graph)
+        batch = from_networkx(nx_complement)
+    edge_index = batch.edge_index.to(args.device)
+
     # TODO later, a more robust attribute system
-    num_edges = edge_index.shape[1]
     edge_weight = torch.ones(num_edges, device=args.device)
     node_weight = torch.ones(N, device=args.device)
+
     return x_in, edge_index, edge_weight, node_weight
 
 # measure and return the validation loss
