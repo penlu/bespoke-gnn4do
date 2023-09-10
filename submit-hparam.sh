@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o 230904_hparam.%j.out
-#SBATCH --job-name="230904_hparam"
+#SBATCH -o 230909_hparam.%j.out
+#SBATCH --job-name="230909_hparam"
 #SBATCH -N 1
 #SBATCH -c 20
 #SBATCH --gres=gpu:volta:1
@@ -28,6 +28,6 @@ echo "model=$MODEL dataset=$DATASET type=$TYPE penalty=$PENALTY r=$R lift_layers
 python -u train.py \
     --stepwise=True --steps=50000 \
     --valid_freq=1000 --dropout=0 \
-    --prefix=230904_hparam \
+    --prefix=230909_hparam_maxcut \
     --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE \
-    --num_layers=$LIFT_LAYERS --rank=$R --vc_penalty=$PENALTY --problem_type=vertex_cover
+    --num_layers=$LIFT_LAYERS --rank=$R --problem_type=max_cut

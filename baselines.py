@@ -4,6 +4,7 @@ import json
 import os
 
 import torch
+from torch.utils.data import random_split
 
 from data.loader import construct_dataset
 from model.losses import max_cut_score, vertex_cover_score, max_clique_score
@@ -25,6 +26,13 @@ if __name__ == '__main__':
 
     # get data
     dataset = construct_dataset(args)
+
+    # rig to only run on the validation dataset
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    indices = val_dataset.indices
+    dataset = val_dataset
 
     lift_fns = {}
     if args.problem_type == 'max_cut':
@@ -72,7 +80,7 @@ if __name__ == '__main__':
             # NOTE: no penalty in return
             lift_score = score_fn(args, x_lift, example)
             res = {
-                'index': i,
+                'index': indices[i],
                 'method': lift_name,
                 'type': 'lift',
                 'score': float(lift_score),
@@ -90,7 +98,7 @@ if __name__ == '__main__':
                 # NOTE: no penalty in return
                 project_score = score_fn(args, x_project, example)
                 res = {
-                    'index': i,
+                    'index': indices[i],
                     'method': f"{lift_name}|{project_name}",
                     'type': 'lift_project',
                     'score': float(project_score),
@@ -125,7 +133,7 @@ if __name__ == '__main__':
             print(f"Gurobi integral score {gurobi_score}")
 
             res = {
-                'index': i,
+                'index': indices[i],
                 'method': 'gurobi',
                 'type': 'solver',
                 'score': float(gurobi_score),
