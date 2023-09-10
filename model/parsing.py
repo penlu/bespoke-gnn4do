@@ -156,8 +156,8 @@ def parse_train_args() -> Namespace:
     modify_train_args(args)
 
     # TODO: checks in a separate function?
-    if args.vc_penalty is not None and args.problem_type != 'vertex_cover':
-        raise ValueError(f"vc_penalty set for problem {args.problem_type}")
+    if args.vc_penalty is not None and args.problem_type == 'max_cut':
+        raise ValueError(f"vc_penalty set for max cut")
 
     return args
 

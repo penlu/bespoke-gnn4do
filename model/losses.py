@@ -14,7 +14,7 @@ def get_loss_fn(args):
     elif args.problem_type == 'vertex_cover':
         return partial(vertex_cover_loss, penalty = args.vc_penalty)
     elif args.problem_type == 'max_clique':
-        raise NotImplementedError('max_clique loss not yet implemented')
+        return partial(max_clique_loss, penalty = args.vc_penalty)
 
 # X should have shape (N, r)
 def max_cut_loss(X, edge_index):
@@ -68,13 +68,17 @@ def vertex_cover_loss(X, edge_index, penalty=2):
 
     return obj
 
+# we are receiving the _complement_ of the target graph
+def max_clique_loss(X, edge_index, penalty=2):
+    return vertex_cover_loss(X, edge_index, penalty=penalty)
+
 def get_score_fn(args):
     if args.problem_type == 'max_cut':
         return max_cut_score
     elif args.problem_type == 'vertex_cover':
         return vertex_cover_score
     elif args.problem_type == 'max_clique':
-        raise NotImplementedError('max_clique loss not yet implemented')
+        return max_clique_score
 
 def max_cut_score(args, X, example):
     # convert numpy array to torch tensor
@@ -101,3 +105,15 @@ def vertex_cover_score(args, X, example):
     edge_index = example.edge_index.to(X.device)
 
     return - vertex_cover_loss(X, edge_index)
+
+# we are receiving the _complement_ of the target graph
+# the score is N - k where k is the vertex cover size
+def max_clique_score(args, X, example):
+    if isinstance(X, np.ndarray):
+        X = torch.FloatTensor(X)
+    if len(X.shape) == 1:
+        X = X[:, None]
+    N = example.num_nodes
+    edge_index = example.edge_index.to(X.device)
+
+    return N - vertex_cover_loss(X, edge_index)

@@ -23,6 +23,8 @@ def construct_grad_layer(args):
         return MaxCutGradLayer()
     elif args.problem_type == 'vertex_cover':
         return VertexCoverGradLayer()
+    elif args.problem_type == 'max_clique':
+        return VertexCoverGradLayer() # we do clique by complement
     else:
         raise ValueError(f"construct_grad_layer got unsupported problem_type {problem_type}")
 
@@ -40,7 +42,7 @@ def construct_model(args):
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
         )
-    elif args.problem_type == 'max_cut' and args.model_type == "ProjectMP":
+    elif args.model_type == "ProjectMP":
         # must have lift network to train.
         assert args.lift_file is not None
         model = LiftProjectNetwork(
