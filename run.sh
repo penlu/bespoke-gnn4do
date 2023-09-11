@@ -9,21 +9,23 @@ run_job () {
     SLOT=$2
     if [ $DATASET = 'RANDOM' ] ; then
         TYPE='RANDOM'
+    elif [ $DATASET = 'ForcedRB' ] ; then
+        TYPE='ForcedRB'
     else
         TYPE='TU'
     fi
     echo $MODEL $TYPE $DATASET $((SLOT - 1))
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
         --stepwise=True --steps=50000 \
-        --valid_freq=100 --dropout=0 \
-        --positional_encoding=laplacian_eigenvector --pe_dimension=8 \
-        --prefix=230823_test \
-        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE
+        --valid_freq=1000 --dropout=0 \
+        --prefix=230910_VC_forcedrb_test \
+        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE \
+        --problem_type=vertex_cover --vc_penalty=1
 }
 export -f run_job
 
 for model in 'LiftMP' 'GIN' 'GAT' 'GCNN' 'GatedGCNN' 'NegationGAT' ; do
-    for dataset in 'RANDOM' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
+    for dataset in 'RANDOM' 'ForcedRB' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         echo $model $dataset
     done
-done | parallel --ungroup -j2 run_job {} {%}
+done | parallel --ungroup -j1 run_job {} {%}

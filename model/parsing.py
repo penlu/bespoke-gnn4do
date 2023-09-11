@@ -24,7 +24,7 @@ def add_general_args(parser: ArgumentParser):
 
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
-    parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU'],
+    parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU', 'ForcedRB'],
                         help='Dataset type to use')
 
     # Arguments for random graphs
