@@ -19,6 +19,12 @@ construct_dataset(dotdict({
     'edge_probability': 0.15
 }))
 
+# construct ForcedRB
+construct_dataset(dotdict({
+    'dataset': 'ForcedRB',
+    'num_graphs': 1000,
+}))
+
 # construct many TU datasets
 for TU_name in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
     construct_dataset(dotdict({'dataset': 'TU', 'TUdataset_name': TU_name}))
