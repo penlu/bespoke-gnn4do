@@ -215,7 +215,7 @@ def parse_baseline_args() -> Namespace:
     parser = ArgumentParser()
     add_general_args(parser)
     add_dataset_args(parser)
-    parser.add_argument('--sdp', type=bool, default=True,
+    parser.add_argument('--sdp', type=bool, default=False,
                         help='Run SDP')
     parser.add_argument('--gurobi', type=bool, default=False,
                         help='Run Gurobi')

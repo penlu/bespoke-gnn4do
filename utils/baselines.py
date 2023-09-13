@@ -234,6 +234,15 @@ def vertex_cover_gurobi(args, example):
     m.optimize();
 
     set_size = m.objVal;
-    x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
+    x_vals = None
+    try:
+        x_vals = np.array([var.X for var in m.getVars()]) * 2 - 1
+    except:
+        try:
+            print("Issue using var.X; trying var.x")
+            x_vals = np.array([var.x for var in m.getVars()]) * 2 - 1
+        except:
+            print("didn't work either?!?! retrying!!!")
+            return vertex_cover_gurobi(args, example)
 
     return set_size, x_vals

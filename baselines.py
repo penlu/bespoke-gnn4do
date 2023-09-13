@@ -2,8 +2,10 @@
 
 import json
 import os
+import networkx as nx
 
 import torch
+from torch_geometric.utils.convert import from_networkx, to_networkx
 
 from data.loader import construct_dataset
 from model.losses import max_cut_score, vertex_cover_score, max_clique_score
