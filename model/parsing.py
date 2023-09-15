@@ -57,6 +57,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
+    parser.add_argument('--repeat_lift_layers', nargs='+', type=int, default=None,
+                        help='A list of the number of times each layer should be repeated')
     parser.add_argument('--num_layers_project', type=int, default=4,
                         help='How many projection layers? (when using FullMP)')
     parser.add_argument('--rank', type=int, default=32,
@@ -117,6 +119,7 @@ def modify_train_args(args: Namespace):
         model_folder = os.path.dirname(args.finetune_from)
         model_args = read_params_from_folder(model_folder)
         print(model_args.keys())
+        print("WARNING, please check the list of relevant_keys")
         relevant_keys = ['problem_type', 
                          'model_type', 
                          'num_layers', 
@@ -126,7 +129,8 @@ def modify_train_args(args: Namespace):
                          'norm', 
                          'heads', 
                          'positional_encoding',
-                         'pe_dimension']
+                         'pe_dimension',
+                         'repeat_lift_layers']
         for k in relevant_keys:
             setattr(args, k, model_args[k])
 

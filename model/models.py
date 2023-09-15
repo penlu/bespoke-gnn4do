@@ -34,6 +34,7 @@ def construct_model(args):
           grad_layer=construct_grad_layer(args),
           in_channels=args.rank,
           num_layers=args.num_layers,
+          repeat_lift_layers=args.repeat_lift_layers,
         )
     elif args.model_type == 'FullMP':
         model = LiftProjectNetwork(
@@ -41,6 +42,7 @@ def construct_model(args):
           in_channels=args.rank,
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
+          repeat_lift_layers=args.repeat_lift_layers,
         )
     elif args.model_type == "ProjectMP":
         # must have lift network to train.
@@ -51,6 +53,7 @@ def construct_model(args):
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
           lift_file=args.lift_file,
+          repeat_lift_layers=args.repeat_lift_layers,
         )
 
     elif args.model_type == 'GIN':
@@ -134,15 +137,23 @@ class LiftLayer(torch.nn.Module):
         return out
 
 class LiftNetwork(torch.nn.Module):
-    def __init__(self, grad_layer, in_channels, num_layers=12):
+    def __init__(self, grad_layer, in_channels, num_layers=12, repeat_lift_layers=None):
         super().__init__()
+        if repeat_lift_layers is not None:
+            # the number of layers must equal the length of the repeat array.
+            assert(len(repeat_lift_layers) == num_layers)
         self.layers = [LiftLayer(grad_layer, in_channels) for _ in range(num_layers)]
         for i, layer in enumerate(self.layers):
             self.add_module(f"layer_{i}", layer)
+        
+        if repeat_lift_layers is None:
+            repeat_lift_layers = [1 for _ in range(num_layers)]
+        self.repeat_lift_layers = repeat_lift_layers
 
     def forward(self, x, edge_index, **kwargs):
-        for l in self.layers:
-            x = l(x, edge_index, **kwargs)
+        for l, repeat_l in zip(self.layers, self.repeat_lift_layers):
+            for _ in range(repeat_l):
+                x = l(x, edge_index, **kwargs)
         return x
 
 # Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
@@ -172,7 +183,7 @@ class ProjectNetwork(torch.nn.Module):
         return x
 
 class LiftProjectNetwork(torch.nn.Module):
-    def __init__(self, in_channels, num_layers_lift, num_layers_project, grad_layer, lift_file=None):
+    def __init__(self, in_channels, num_layers_lift, num_layers_project, grad_layer, lift_file=None, repeat_lift_layers=None):
         super().__init__()
 
         if lift_file is not None:
@@ -198,7 +209,7 @@ class LiftProjectNetwork(torch.nn.Module):
                 param.requires_grad = False
             
         else:
-            self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift)
+            self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift, repeat_lift_layers=repeat_lift_layers)
         self.project_net = ProjectNetwork(grad_layer, in_channels, num_layers=num_layers_project)
 
     def forward(self, x, edge_index, edge_weight):
