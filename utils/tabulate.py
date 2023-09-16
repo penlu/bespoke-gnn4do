@@ -14,14 +14,16 @@ from data.loader import RandomGraphDataset
 
 def load_datasets():
     datasets = {}
+    print('loading RANDOM')
     datasets['RANDOM'] = RandomGraphDataset(
-      root='/tmp/random',
+      root='../datasets/random',
       num_graphs=1000,
       num_nodes_per_graph=100,
       edge_probability=0.15,
     )
     for dataset in ['PROTEINS', 'ENZYMES', 'COLLAB', 'IMDB-BINARY', 'MUTAG']:
-        loader = TUDataset(root=f'/tmp/{dataset}', name=dataset)
+        print(f'loading {dataset}')
+        loader = TUDataset(root=f'../datasets', name=dataset)
         datasets[dataset] = loader
 
     return datasets
@@ -30,7 +32,7 @@ def load_datasets():
 
 # Collect training outputs; return map (model, dataset) -> (losses, scores)
 def load_train_outputs(path, prefix):
-    model_list = [path / x for x in os.listdir(path) if x.startswith(prefix)]
+    model_list = [path / x for x in os.listdir(path) if x.startswith(prefix + '_paramhash:')]
 
     # load in params
     outputs = {}
@@ -43,10 +45,10 @@ def load_train_outputs(path, prefix):
             if model_args['dataset'] == 'TU':
                 dataset = model_args['TUdataset_name']
             else:
-                dataset = 'RANDOM'
+                dataset = model_args['dataset']
 
             outputs[(model_args['model_type'], dataset)] = (train_losses, valid_scores)
-            print(f"load_train_outputs: got {model_args['model_type']}, {dataset}")
+            print(f"load_train_outputs: got {model_args['model_type']}, {dataset} (positional encoding={model_args['positional_encoding']}, dim={model_args['pe_dimension']}")
         except:
             print(f'load_train_outputs: problem with {model_folder}')
             print(sys.exc_info())
@@ -69,21 +71,21 @@ def load_baseline_outputs(path, prefix, method, indices=None):
                 dataset = "RANDOM"
 
             with open(folder / 'results.jsonl', 'r') as f:
-                total_score = 0.
-                count = 0
                 for line in f:
                     res = json.loads(line)
                     # second condition is: only do this if the graph is in the validation set
                     if res['method'] == method and (indices == None or res['index'] in indices[dataset]):
-                        total_score += res['score']
-                        count += 1
+                        outputs[dataset] = outputs.get(dataset, []) + [res['score']]
 
-            outputs[dataset] = total_score / count
-
-            print(f"load_baseline_outputs: {dataset} length: {count}")
-            print(f"load_baseline_outputs: {dataset} {method}: {total_score / count}")
         except:
             print(f'something is wrong w/ {folder}')
             print(sys.exc_info())
+
+    for dataset, scores in outputs.items():
+        total_score = float(sum(scores))
+        count = len(scores)
+        print(f"load_baseline_outputs: {dataset} length: {count}")
+        print(f"load_baseline_outputs: {dataset} {method}: {total_score / count}")
+        outputs[dataset] = float(sum(scores)) / len(scores)
 
     return outputs

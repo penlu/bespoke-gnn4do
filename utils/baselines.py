@@ -210,7 +210,7 @@ def max_cut_gurobi(args, example):
             print("didn't work either?!?! retrying!!!")
             return max_cut_gurobi(args, example)
 
-    return x_vals
+    return x_vals, m.status
 
 def vertex_cover_gurobi(args, example):
     nx_complement = to_networkx(example) # nx.operators.complement()
@@ -245,4 +245,4 @@ def vertex_cover_gurobi(args, example):
             print("didn't work either?!?! retrying!!!")
             return vertex_cover_gurobi(args, example)
 
-    return set_size, x_vals
+    return set_size, x_vals, m.status
