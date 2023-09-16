@@ -116,20 +116,14 @@ if __name__ == '__main__':
         # run gurobi
         if args.gurobi:
             if args.problem_type == 'max_cut':
-                x_gurobi = max_cut_gurobi(args, example)
-                # TODO: there's no gurobi_penalty here anymore?
-                # gurobi_penalty = None
+                x_gurobi, status = max_cut_gurobi(args, example)
                 gurobi_score = score_fn(args, x_gurobi, example)
             elif args.problem_type == 'vertex_cover':
-                set_size, x_gurobi = vertex_cover_gurobi(args, example)
-                # TODO: there's no gurobi_penalty here anymore?
-                # gurobi_penalty = None
+                set_size, x_gurobi, status = vertex_cover_gurobi(args, example)
                 gurobi_score = score_fn(args, x_gurobi, example)
             elif args.problem_type == 'max_clique':
                 # we do max clique by running VC on graph complement
-                set_size, x_gurobi = vertex_cover_gurobi(args, example)
-                # TODO: there's no gurobi_penalty here anymore?
-                # gurobi_penalty = None
+                set_size, x_gurobi, status = vertex_cover_gurobi(args, example)
                 gurobi_score = score_fn(args, x_gurobi, example)
             else:
                 raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
@@ -139,6 +133,7 @@ if __name__ == '__main__':
                 'index': i,
                 'method': 'gurobi',
                 'type': 'solver',
+                'status': status,
                 'score': float(gurobi_score),
                 #'penalty': float(gurobi_penalty),
                 'x': x_gurobi.tolist(),
