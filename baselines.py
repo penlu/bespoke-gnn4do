@@ -3,6 +3,7 @@
 import json
 import os
 import networkx as nx
+import time
 
 import torch
 from torch_geometric.utils.convert import from_networkx, to_networkx
@@ -70,13 +71,17 @@ if __name__ == '__main__':
         # we'll run each pair of lift method and project method
         for lift_name, lift_fn in lift_fns.items():
             # calculate lift output and save score
+            start_time = time.time()
             x_lift = torch.FloatTensor(lift_fn(args, example))
+            lift_time = time.time() - start_time
+
             # NOTE: no penalty in return
             lift_score = score_fn(args, x_lift, example)
             res = {
                 'index': i,
                 'method': lift_name,
                 'type': 'lift',
+                'time': lift_time,
                 'score': float(lift_score),
                 #'penalty': float(lift_penalty),
                 'x': x_lift.tolist(),
@@ -88,13 +93,17 @@ if __name__ == '__main__':
 
             # now use each project method and save scores
             for project_name, project_fn in project_fns.items():
+                start_time = time.time()
                 x_project = torch.FloatTensor(project_fn(args, x_lift, example, score_fn))
+                proj_time = time.time() - start_time
+
                 # NOTE: no penalty in return
                 project_score = score_fn(args, x_project, example)
                 res = {
                     'index': i,
                     'method': f"{lift_name}|{project_name}",
                     'type': 'lift_project',
+                    'time': proj_time,
                     'score': float(project_score),
                     #'penalty': float(project_penalty),
                     'x': x_project.tolist(),
