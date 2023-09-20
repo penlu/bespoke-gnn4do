@@ -21,6 +21,6 @@ for DATASET in RANDOM ENZYMES PROTEINS IMDB-BINARY MUTAG COLLAB ForcedRB; do
     fi
     python baselines.py --dataset $TYPE \
       --problem_type $1 \
-      --prefix 230916_gurobi_20s_$DATASET --TUdataset_name $DATASET \
+      --prefix 230916_gurobi_$1_20s_$DATASET --TUdataset_name $DATASET \
       --gurobi True --gurobi_timeout 20
 done
