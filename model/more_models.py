@@ -20,3 +20,6 @@ class NegationGAT(BasicGNN):
         conv = NegationGATv2Conv(in_channels, out_channels,
                                  concat=True, dropout=self.dropout, **kwargs)
         return conv
+
+    def forward(self, x, edge_index, **kwargs):
+        return super().forward(x, edge_index)
