@@ -40,6 +40,11 @@ def load_train_outputs(path, prefix):
         try:
             with open(os.path.join(model_folder, 'params.txt'), 'r') as f:
                 model_args = json.load(f)
+        except:
+            print(f'load_train_outputs: problem with {model_folder}: could not load args')
+            print(sys.exc_info())
+
+        try:
             train_losses = np.load(os.path.join(model_folder, 'train_losses.npy'))
             valid_scores = np.load(os.path.join(model_folder, 'valid_scores.npy'))
             if model_args['dataset'] == 'TU':
@@ -50,7 +55,7 @@ def load_train_outputs(path, prefix):
             outputs[(model_args['model_type'], dataset)] = (train_losses, valid_scores)
             print(f"load_train_outputs: got {model_args['model_type']}, {dataset} (positional encoding={model_args['positional_encoding']}, dim={model_args['pe_dimension']}")
         except:
-            print(f'load_train_outputs: problem with {model_folder}')
+            print(f"load_train_outputs: problem with {model_folder}: type={model_args['model_type']} dataset={dataset}")
             print(sys.exc_info())
 
     return outputs
@@ -68,13 +73,13 @@ def load_baseline_outputs(path, prefix, method, indices=None):
             if args['dataset'] == 'TU':
                 dataset = args['TUdataset_name']
             else:
-                dataset = "RANDOM"
+                dataset = args['dataset']
 
             with open(folder / 'results.jsonl', 'r') as f:
                 for line in f:
                     res = json.loads(line)
                     # second condition is: only do this if the graph is in the validation set
-                    if res['method'] == method and (indices == None or res['index'] in indices[dataset]):
+                    if res['method'] == method and (indices == None or dataset not in indices or res['index'] in indices[dataset]):
                         outputs[dataset] = outputs.get(dataset, []) + [res['score']]
 
         except:

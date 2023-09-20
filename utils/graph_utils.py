@@ -1,4 +1,8 @@
+import networkx as nx
 import torch
+from torch_geometric.utils.convert import from_networkx, to_networkx
+import time
+#from functools import lru_cache
 
 # TODO perhaps want to just be working with networkx graphs
 def gen_graph(N=100, p=0.15, device=torch.device("cpu"), **kwargs):
@@ -89,3 +93,15 @@ def random_rotation(graph_params, conv_mc, A, edge_index,iterate=10):
             index = index + 1
     
     return torch.max(cuts)
+
+complement_time = 0.
+#@lru_cache(maxsize=10000)
+def complement_graph(G):
+    global complement_time
+    start_time = time.time()
+    nx_graph = to_networkx(G)
+    nx_complement = nx.operators.complement(nx_graph)
+    new_graph = from_networkx(nx_complement)
+    complement_time += time.time() - start_time
+    print(f"complement_graph: {complement_time}")
+    return new_graph

@@ -5,3 +5,5 @@ baseline_runs/*
 **/.*.swo
 **/__pycache__
 .ipynb_checkpoints
+datasets/
+datasets_complement/

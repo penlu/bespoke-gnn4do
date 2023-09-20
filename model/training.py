@@ -1,11 +1,9 @@
-import networkx as nx
 import numpy as np
 import os
 import time
 
 import torch
 import torch.nn.functional as F
-from torch_geometric.utils.convert import from_networkx, to_networkx
 
 from model.saving import save_model
 from model.losses import get_loss_fn, get_score_fn
@@ -34,11 +32,6 @@ def featurize_batch(args, batch):
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
 
-    # we do max clique by running VC on graph complement
-    if args.problem_type == 'max_clique':
-        nx_graph = to_networkx(batch)
-        nx_complement = nx.operators.complement(nx_graph)
-        batch = from_networkx(nx_complement)
     edge_index = batch.edge_index.to(args.device)
 
     # TODO later, a more robust attribute system
