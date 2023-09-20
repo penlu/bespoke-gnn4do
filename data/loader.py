@@ -12,7 +12,7 @@ from torch_geometric.data.datapipes import functional_transform
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.utils.convert import from_networkx
-from torch_geometric.transforms import BaseTransform, AddRandomWalkPE
+from torch_geometric.transforms import BaseTransform, AddRandomWalkPE, Compose
 from torch_geometric.utils import (
     get_laplacian,
     get_self_loop_attr,
@@ -22,7 +22,7 @@ from torch_geometric.utils import (
     to_torch_csr_tensor,
 )
 
-from utils.graph_utils import gen_graph
+from utils.graph_utils import gen_graph, complement_graph
 from data.forced_rb import RB_model
 
 # cribbed from torch_geometric.transforms, modified to use dense eigenvalue functions
@@ -101,6 +101,15 @@ class AddLaplacianEigenvectorPE(BaseTransform):
 
         data = add_node_attr(data, pe, attr_name=self.attr_name)
         return data
+
+@functional_transform('to_complement')
+class ToComplement(BaseTransform):
+    r"""Complement of graph."""
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __call__(self, data: Data) -> Data:
+        return complement_graph(data)
 
 class RandomGraphDataset(InMemoryDataset):
     def __init__(self, root,
@@ -203,21 +212,32 @@ def construct_dataset(args):
     elif args.positional_encoding is not None:
         raise ValueError(f"Invalid positional encoding passed into construct_loaders: {args.positional_encoding}")
 
+    # we do max clique by running VC on graph complement
+    # XXX kinda grody!!!
+    if args.problem_type == 'max_clique':
+        if pre_transform is not None:
+            pre_transform = Compose([pre_transform, ToComplement()])
+        else:
+            pre_transform = ToComplement()
+        data_root = 'datasets_complement'
+    else:
+        data_root = 'datasets'
+
     if args.dataset == 'RANDOM':
-        dataset = RandomGraphDataset(root='datasets/random',
+        dataset = RandomGraphDataset(root=f'{data_root}/random',
                     num_graphs=args.num_graphs,
                     num_nodes_per_graph=args.num_nodes_per_graph,
                     edge_probability=args.edge_probability,
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'TU':
-        dataset = TUDataset(root=f'datasets',
+        dataset = TUDataset(root=f'{data_root}',
                     name=args.TUdataset_name,
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'ForcedRB':
         # TODO other parameters for graph generation
-        dataset = ForcedRBDataset(root=f'datasets/forced_rb',
+        dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
                     num_graphs=args.num_graphs,
                     pre_transform=pre_transform,
                     transform=transform)
