@@ -216,7 +216,7 @@ def construct_dataset(args):
     # XXX kinda grody!!!
     if args.problem_type == 'max_clique':
         if pre_transform is not None:
-            pre_transform = Compose([pre_transform, ToComplement()])
+            pre_transform = Compose([ToComplement(), pre_transform])
         else:
             pre_transform = ToComplement()
         data_root = 'datasets_complement'
