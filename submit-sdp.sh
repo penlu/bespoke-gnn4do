@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o 230901_VC_sdp.%j.out
-#SBATCH --job-name="230901_VC_sdp"
+#SBATCH -o 230920_clique_sdp.%j.out
+#SBATCH --job-name="230920_clique_sdp"
 #SBATCH -c 48
 #SBATCH --time=72:00:00          # total run time limit (HH:MM:SS)
 
@@ -22,5 +22,6 @@ echo "Job ID $SLURM_JOB_ID"
 echo "dataset=$DATASET type=$TYPE"
 
 python -u baselines.py --dataset $TYPE \
-  --problem_type vertex_cover \
-  --prefix 230913_forcedrb_VC_sdp_$DATASET --TUdataset_name $DATASET
+  --problem_type max_clique \
+  --prefix 230920_clique_sdp_$DATASET --TUdataset_name $DATASET \
+  --sdp=True
