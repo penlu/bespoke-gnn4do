@@ -16,6 +16,8 @@ DATASET=$2
 
 if [ $DATASET = 'RANDOM' ] ; then
     TYPE='RANDOM'
+elif [ $DATASET = 'ForcedRB' ] ; then
+    TYPE='ForcedRB'
 else
     TYPE='TU'
 fi

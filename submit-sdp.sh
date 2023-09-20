@@ -13,6 +13,8 @@ DATASET=$1
 
 if [ $DATASET = 'RANDOM' ] ; then
     TYPE='RANDOM'
+elif [ $DATASET = 'ForcedRB' ] ; then
+    TYPE='ForcedRB'
 else
     TYPE='TU'
 fi
@@ -21,4 +23,4 @@ echo "dataset=$DATASET type=$TYPE"
 
 python -u baselines.py --dataset $TYPE \
   --problem_type vertex_cover \
-  --prefix 230902_VC_sdp_$DATASET --TUdataset_name $DATASET
+  --prefix 230913_forcedrb_VC_sdp_$DATASET --TUdataset_name $DATASET
