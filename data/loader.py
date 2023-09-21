@@ -2,101 +2,13 @@
 
 import torch
 from torch.utils.data import random_split
-from torch_geometric.data import InMemoryDataset
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
-from torch_geometric.utils.convert import from_networkx
 from torch_geometric.transforms import AddRandomWalkPE, Compose
 
-from data.forced_rb import RB_model
+from data.forced_rb_dataset import ForcedRBDataset
+from data.random_dataset import RandomGraphDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
-
-class RandomGraphDataset(InMemoryDataset):
-    def __init__(self, root,
-                  num_graphs=10000, num_nodes_per_graph=100, edge_probability=0.15,
-                  seed=0,
-                  transform=None, pre_transform=None, pre_filter=None):
-        self.num_graphs = num_graphs
-        self.num_nodes_per_graph = num_nodes_per_graph
-        self.edge_probability = edge_probability
-        self.seed = seed
-        super(RandomGraphDataset, self).__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
-
-    @property
-    def raw_file_names(self):
-        # no files needed
-        return []
-
-    @property
-    def processed_file_names(self):
-        return [f'random_{self.num_graphs}_{self.num_nodes_per_graph}_{self.edge_probability}_{self.seed}.pt']
-
-    def download(self):
-        # no download needed
-        pass
-
-    def process(self):
-        # create random undirected graphs and save
-        random_state = np.random.RandomState(self.seed)
-        data_list = []
-        for i in range(self.num_graphs):
-            G = networkx.erdos_renyi_graph(self.num_nodes_per_graph, self.edge_probability, seed=random_state)
-            data_list.append(from_networkx(G))
-
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
-
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
-
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
-
-class ForcedRBDataset(InMemoryDataset):
-    def __init__(self, root,
-                  num_graphs=1000,
-                  seed=0, parallel=8,
-                  transform=None, pre_transform=None, pre_filter=None):
-        self.num_graphs = num_graphs
-        self.seed = seed
-        self.parallel = parallel
-        super(ForcedRBDataset, self).__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
-
-    @property
-    def raw_file_names(self):
-        # no files needed
-        return []
-
-    @property
-    def processed_file_names(self):
-        return [f'forcedRB_{self.num_graphs}_{self.seed}_{self.parallel}.pt']
-
-    def download(self):
-        # no download needed
-        pass
-
-    def process(self):
-        # create random undirected graphs and save
-        generator = np.random.default_rng(self.seed)
-
-        # TODO use SeedSequence and multiprocessing here
-
-        data_list = []
-        for i in range(self.num_graphs):
-            G = RB_model(generator=generator)
-            data_list.append(from_networkx(G))
-            print(f'generated {i+1} of {self.num_graphs}')
-
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
-
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
-
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
 
 def construct_dataset(args):
     # precompute laplacian eigenvectors unconditionally

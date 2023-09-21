@@ -1,14 +1,16 @@
 import itertools
+from itertools import product
 import random
 import numpy as np
 import networkx as nx
 import json
-import itertools
-from itertools import product
 import time 
-import networkx as nx
 import gurobipy as gp
 from gurobipy import GRB
+
+import torch
+from torch_geometric.data import InMemoryDataset
+from torch_geometric.utils.convert import from_networkx
 
 # Adapted from Nikos's Forced_RB.ipynb
 
@@ -20,9 +22,9 @@ from gurobipy import GRB
 #5) The is_forced argument enforces the size of the maximum independent set to be n. This can slow down the generation process slightly.
 #To force the independent set to be exactly n we can create a set of nodes that contains exactly one node from each disjoint clique, and then ensure that no edge gets sampled between them.
 
-def RB_model(generator=np.random.default_rng(0), is_forced=True):
-    n = generator.integers(10, 26) #number of disjoint cliques (and upper bound on max independent set), feel free to change the ranges depending on comp budget or other considerations
-    k = generator.integers(5, 21)  #number of nodes on each disjoint clique, feel free to change as well
+def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 21], is_forced=True):
+    n = generator.integers(n_range[0], n_range[1]) #number of disjoint cliques (and upper bound on max independent set), feel free to change the ranges depending on comp budget or other considerations
+    k = generator.integers(k_range[0], k_range[1])  #number of nodes on each disjoint clique, feel free to change as well
 
     p = generator.uniform(0.3, 1.0) #determines how dense the sampling will be
     a = np.log(k) / np.log(n) #parameter that determines how many edges we sample
@@ -58,8 +60,52 @@ def RB_model(generator=np.random.default_rng(0), is_forced=True):
             while tuple(reversed(edge)) in total_edges:
                 total_edges.remove(tuple(reversed(edge)))
 
-
     G = nx.Graph()
     G.add_edges_from(list(total_edges))
     G = G.to_undirected()
     return G
+
+class ForcedRBDataset(InMemoryDataset):
+    def __init__(self, root,
+                  num_graphs=1000,
+                  seed=0, parallel=8,
+                  transform=None, pre_transform=None, pre_filter=None):
+        self.num_graphs = num_graphs
+        self.seed = seed
+        self.parallel = parallel
+        super(ForcedRBDataset, self).__init__(root, transform, pre_transform, pre_filter)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @property
+    def raw_file_names(self):
+        # no files needed
+        return []
+
+    @property
+    def processed_file_names(self):
+        return [f'forcedRB_{self.num_graphs}_{self.seed}_{self.parallel}.pt']
+
+    def download(self):
+        # no download needed
+        pass
+
+    def process(self):
+        # create random undirected graphs and save
+        generator = np.random.default_rng(self.seed)
+
+        # TODO use SeedSequence and multiprocessing here
+
+        data_list = []
+        for i in range(self.num_graphs):
+            G = RB_model(generator=generator)
+            data_list.append(from_networkx(G))
+            print(f'generated {i+1} of {self.num_graphs}')
+
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(data) for data in data_list]
+
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
