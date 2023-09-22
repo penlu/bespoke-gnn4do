@@ -24,16 +24,39 @@ def add_general_args(parser: ArgumentParser):
 
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
-    parser.add_argument('--dataset', type=str, default='RANDOM', choices=['RANDOM', 'TU', 'ForcedRB'],
+    parser.add_argument('--dataset', type=str, default='RANDOM',
+                        choices=[
+                            'RANDOM',
+                            'ForcedRB',
+                            'TU',
+                            'RANDOM_inf',
+                            'ForcedRB_inf',
+                        ],
                         help='Dataset type to use')
 
-    # Arguments for random graphs
+    # Arguments for generated datasets
+    parser.add_argument('--data_seed', type=int, default=0,
+                        help='Seed to use for generated datasets (RANDOM and ForcedRB)')
+    parser.add_argument('--parallel', type=int, default=0,
+                        help='How many parallel workers to use for generating data?')
     parser.add_argument('--num_graphs', type=int, default=1000,
-                        help='When using random graphs, how many to generate?')
+                        help='When using generated datasets, how many graphs to generate?')
+
+    # Arguments for random graphs
     parser.add_argument('--num_nodes_per_graph', type=int, default=100,
                         help='When using random graphs, how many nodes per graph?')
     parser.add_argument('--edge_probability', type=float, default=0.15,
                         help='When using random graphs, what probability per edge in graph?')
+
+    # Arguments for ForcedRB graphs
+    # TODO
+    parser.add_argument('--RB_n', nargs=2, type=int, default=[10, 26],
+                        help='For ForcedRB, how many disjoint cliques? This upper bounds maximum independent set size. Provide two numbers for range [a, b).')
+    parser.add_argument('--RB_k', nargs=2, type=int, default=[5, 21],
+                        help='For ForcedRB, how many nodes in each disjoint clique? Provide two numbers for range [a, b).')
+
+    # Arguments for chordal graphs
+    # TODO
 
     # Arguments for TU datasets
     parser.add_argument('--TUdataset_name', type=str, default=None,

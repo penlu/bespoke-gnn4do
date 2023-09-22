@@ -1,13 +1,15 @@
 # Dataset loading functionality
 
+import itertools
+
 import torch
-from torch.utils.data import random_split
+from torch.utils.data import IterableDataset, random_split
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.transforms import AddRandomWalkPE, Compose
 
 from data.forced_rb_dataset import ForcedRBDataset
-from data.random_dataset import RandomGraphDataset
+from data.random_dataset import RandomGraphDataset, RandomGraphIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
 
 def construct_dataset(args):
@@ -22,7 +24,7 @@ def construct_dataset(args):
         assert args.pe_dimension < args.rank
         transform = AddRandomWalkPE(walk_length=args.pe_dimension)
     elif args.positional_encoding is not None:
-        raise ValueError(f"Invalid positional encoding passed into construct_loaders: {args.positional_encoding}")
+        raise ValueError(f"Invalid positional encoding passed into construct_dataset: {args.positional_encoding}")
 
     # we do max clique by running VC on graph complement
     # XXX kinda grody!!!
@@ -40,21 +42,35 @@ def construct_dataset(args):
                     num_graphs=args.num_graphs,
                     num_nodes_per_graph=args.num_nodes_per_graph,
                     edge_probability=args.edge_probability,
+                    seed=args.data_seed,
+                    parallel=args.parallel,
                     pre_transform=pre_transform,
                     transform=transform)
+    elif args.dataset == 'RANDOM_inf':
+        dataset = RandomGraphIterableDataset(
+                    num_nodes_per_graph=args.num_nodes_per_graph,
+                    edge_probability=args.edge_probability,
+                    seed=args.data_seed,
+                    pre_transform=pre_transform,
+                    transform=transform)
+    elif args.dataset == 'ForcedRB':
+        # TODO XXX handle infinite data generation
+        dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
+                    num_graphs=args.num_graphs,
+                    n_range=args.RB_n,
+                    k_range=args.RB_k,
+                    seed=args.data_seed,
+                    parallel=args.parallel,
+                    pre_transform=pre_transform,
+                    transform=transform)
+    # TODO chordal graph generation
     elif args.dataset == 'TU':
         dataset = TUDataset(root=f'{data_root}',
                     name=args.TUdataset_name,
                     pre_transform=pre_transform,
                     transform=transform)
-    elif args.dataset == 'ForcedRB':
-        # TODO other parameters for graph generation
-        dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
-                    num_graphs=args.num_graphs,
-                    pre_transform=pre_transform,
-                    transform=transform)
     else:
-        raise ValueError(f"Unimplemented dataset {args.dataset}. Expected RANDOM or TU.")
+        raise ValueError(f"Invalid dataset passed into construct_dataset: {args.dataset}")
 
     return dataset
 
@@ -67,6 +83,24 @@ def construct_loaders(args, mode=None):
     '''
     dataset = construct_dataset(args)
 
+    if isinstance(dataset, IterableDataset):
+        # infinite data training
+        train_loader = DataLoader(dataset,
+            batch_size=args.batch_size,
+            num_workers=args.parallel,
+        )
+
+        if mode == "test":
+            return train_loader
+        elif mode is None:
+            # TODO what to do about the validation set when infinite data?
+            # TODO make the validation set size controllable
+            val_loader = DataLoader(itertools.islice(dataset, 100), batch_size=args.batch_size, shuffle=False)
+            return train_loader, val_loader
+        else:
+            raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
+
+    # default split mode
     if mode == "test":
         # the whole dataset is your loader.
         test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
