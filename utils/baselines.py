@@ -140,6 +140,9 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     scores = torch.vmap(lambda x: score_fn(args, x, example))(x_int)
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
+
+    # TODO XXX add line here that ensures that all outputs are +- 1 and never 0
+
     return out
 
 def max_cut_greedy(args, x_proj, example, score_fn):

@@ -8,7 +8,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.transforms import AddRandomWalkPE, Compose
 
-from data.forced_rb_dataset import ForcedRBDataset
+from data.forced_rb_dataset import ForcedRBDataset, ForcedRBIterableDataset
 from data.random_dataset import RandomGraphDataset, RandomGraphIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
 
@@ -117,6 +117,7 @@ def construct_loaders(args, mode=None):
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
 
+        # TODO XXX make the RNG for the random_split a dedicated argument so that changing seed doesn't change this split
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
