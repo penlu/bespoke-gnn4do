@@ -117,8 +117,8 @@ def construct_loaders(args, mode=None):
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
 
-        # TODO XXX make the RNG for the random_split a dedicated argument so that changing seed doesn't change this split
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+        generator = torch.Generator().manual_seed(args.split_seed)
+        train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
 
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)

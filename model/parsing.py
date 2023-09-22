@@ -69,6 +69,10 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--pe_dimension', type=int, default=8,
                         help='Dimensionality of the positional encoding')
 
+    # Arguments for data loader
+    parser.add_argument('--split_seed', type=int, default=0,
+                        help='Seed to use for train/val/test split')
+
 def add_train_args(parser: ArgumentParser):
     """
     Adds training arguments to an ArgumentParser.
