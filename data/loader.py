@@ -54,13 +54,19 @@ def construct_dataset(args):
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'ForcedRB':
-        # TODO XXX handle infinite data generation
         dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
                     num_graphs=args.num_graphs,
                     n_range=args.RB_n,
                     k_range=args.RB_k,
                     seed=args.data_seed,
                     parallel=args.parallel,
+                    pre_transform=pre_transform,
+                    transform=transform)
+    elif args.dataset == 'ForcedRB_inf':
+        dataset = ForcedRBIterableDataset(
+                    n_range=args.RB_n,
+                    k_range=args.RB_k,
+                    seed=args.data_seed,
                     pre_transform=pre_transform,
                     transform=transform)
     # TODO chordal graph generation

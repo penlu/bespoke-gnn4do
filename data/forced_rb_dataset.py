@@ -9,6 +9,7 @@ import gurobipy as gp
 from gurobipy import GRB
 
 import torch
+from torch.utils.data import IterableDataset, get_worker_info
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
 
@@ -67,12 +68,16 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
 
 class ForcedRBDataset(InMemoryDataset):
     def __init__(self, root,
-                  num_graphs=1000,
-                  seed=0, parallel=8,
+                  num_graphs=1000, n_range=[10, 26], k_range=[5, 21],
+                  seed=0, parallel=0,
                   transform=None, pre_transform=None, pre_filter=None):
         self.num_graphs = num_graphs
+        self.n_range = n_range
+        self.k_range = k_range
+
         self.seed = seed
         self.parallel = parallel
+
         super(ForcedRBDataset, self).__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -90,10 +95,9 @@ class ForcedRBDataset(InMemoryDataset):
         pass
 
     def process(self):
-        # create random undirected graphs and save
-        generator = np.random.default_rng(self.seed)
-
+        # TODO actually handle parallel
         # TODO use SeedSequence and multiprocessing here
+        generator = np.random.default_rng(self.seed)
 
         data_list = []
         for i in range(self.num_graphs):
@@ -109,3 +113,48 @@ class ForcedRBDataset(InMemoryDataset):
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
+
+class ForcedRBIterableDataset(IterableDataset):
+    def __init__(self,
+                  num_graphs=1000, n_range=[10, 26], k_range=[5, 21],
+                  seed=0,
+                  transform=None, pre_transform=None, pre_filter=None):
+        self.num_graphs = num_graphs
+        self.n_range = n_range
+        self.k_range = k_range
+
+        self.seed = seed
+
+        self.transform = transform
+        self.pre_transform = pre_transform
+        self.pre_filter = pre_filter
+
+        super(ForcedRBIterableDataset, self).__init__()
+
+    def __iter__(self):
+        # compute our seed
+        worker = get_worker_info()
+        if worker == None:
+            seed = self.seed
+        else:
+            # if we are a worker, we generate a seed
+            # as written this should put out 256 bits: collision is unlikely
+            seed = np.random.SeedSequence(entropy=self.seed, spawn_key=(worker.id,))
+
+        # initialize RNG
+        generator = np.random.default_rng(seed)
+
+        # generate random graphs forever
+        while True:
+            G = RB_model(generator=generator)
+            G = from_networkx(G)
+
+            # apply filters and transforms
+            if self.pre_filter is not None and not self.pre_filter(G):
+                continue
+            if self.pre_transform is not None:
+                G = self.pre_transform(G)
+            if self.transform is not None:
+                G = self.transform(G)
+
+            yield G
