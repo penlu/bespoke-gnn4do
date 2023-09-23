@@ -15,7 +15,6 @@ from torch_geometric.nn.models import GAT, GIN, GCN
 from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
-from model.nikos_models import LiftProjectNetwork_mine
 from model.saving import load_model
 from model.parsing import read_params_from_folder
 
