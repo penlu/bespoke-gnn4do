@@ -147,7 +147,7 @@ def modify_train_args(args: Namespace):
         model_args = read_params_from_folder(model_folder)
         print(model_args.keys())
         print("WARNING, please check the list of relevant_keys")
-        relevant_keys = ['problem_type', 
+        pretrain_config_keys = ['problem_type', 
                          'model_type', 
                          'num_layers', 
                          'num_layers_project', 
@@ -157,8 +157,9 @@ def modify_train_args(args: Namespace):
                          'heads', 
                          'positional_encoding',
                          'pe_dimension',
-                         'repeat_lift_layers']
-        for k in relevant_keys:
+                         'repeat_lift_layers',
+                         'lift_file']
+        for k in pretrain_config_keys:
             setattr(args, k, model_args[k])
 
     # TODO add real logger functionality
