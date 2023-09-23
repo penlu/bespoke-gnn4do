@@ -138,13 +138,19 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
                     valid_time = time.time() - valid_start_time
-                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} valid_loss={valid_loss} valid_score={valid_score}")
                     
                     # test
                     if test_loader is not None:
                         test_loss, test_score = validate(args, model, test_loader)
                         test_losses.append(test_loss)
                         test_scores.append(test_score)
+                    else:
+                        test_loss = np.inf
+                        test_score = -np.inf
+
+                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} \n\
+                                valid_loss={valid_loss} valid_score={valid_score} \n\
+                                test_loss={test_loss} test_score={test_score}")
 
                 # check if training is done
                 if steps >= args.steps:
