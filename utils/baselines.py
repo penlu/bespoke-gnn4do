@@ -140,6 +140,9 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     scores = torch.vmap(lambda x: score_fn(args, x, example))(x_int)
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
+
+    # TODO XXX add line here that ensures that all outputs are +- 1 and never 0
+
     return out
 
 def max_cut_greedy(args, x_proj, example, score_fn):
@@ -196,9 +199,6 @@ def max_cut_gurobi(args, example):
     # Optimize model
     m.optimize()
 
-    print("model status:", m.status)
-
-    set_size = m.objVal
     x_vals = None
     try:
         x_vals = np.array([var.X for var in m.getVars()]) * 2 - 1
@@ -210,7 +210,7 @@ def max_cut_gurobi(args, example):
             print("didn't work either?!?! retrying!!!")
             return max_cut_gurobi(args, example)
 
-    return x_vals, m.status
+    return x_vals, m.status, m.Runtime
 
 def vertex_cover_gurobi(args, example):
     nx_complement = to_networkx(example) # nx.operators.complement()
@@ -228,12 +228,11 @@ def vertex_cover_gurobi(args, example):
     for edge in nx_complement.edges():
         m.addConstr(x_vars['x_'+str(edge[0])] + x_vars['x_'+str(edge[1])] >= 1,'c_'+str(count_edges))
         count_edges+=1
-    m.setObjective(sum([x_vars['x_'+str(node)] for node in nx_complement.nodes()]), GRB.MINIMIZE);
+    m.setObjective(sum([x_vars['x_'+str(node)] for node in nx_complement.nodes()]), GRB.MINIMIZE)
 
     # Optimize model
-    m.optimize();
+    m.optimize()
 
-    set_size = m.objVal;
     x_vals = None
     try:
         x_vals = np.array([var.X for var in m.getVars()]) * 2 - 1
@@ -245,4 +244,4 @@ def vertex_cover_gurobi(args, example):
             print("didn't work either?!?! retrying!!!")
             return vertex_cover_gurobi(args, example)
 
-    return set_size, x_vals, m.status
+    return x_vals, m.status, m.Runtime

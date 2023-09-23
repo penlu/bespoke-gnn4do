@@ -63,6 +63,7 @@ def validate(args, model, val_loader, criterion=None):
                 total_loss += loss.cpu().detach().numpy()
 
                 x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                # TODO XXX add greedy here to ENSURE we are getting a binary vector out
                 score = score_fn(args, x_proj, example)
                 total_score += score.cpu().detach().numpy()
 
@@ -122,6 +123,8 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             # increment epoch loss counters
             epoch_total_loss += loss.cpu().detach().numpy()
             epoch_count += batch.num_graphs
+
+            # TODO would be nice to get periodic training loss printouts for infinite datasets
 
             steps += 1
             if args.stepwise:

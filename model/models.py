@@ -15,6 +15,7 @@ from torch_geometric.nn.models import GAT, GIN, GCN
 from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
+from model.nikos_models import LiftProjectNetwork_mine
 from model.saving import load_model
 from model.parsing import read_params_from_folder
 
@@ -70,6 +71,13 @@ def construct_model(args):
                             dropout=args.dropout, 
                             v2=True, norm=args.norm, 
                             num_layers=args.num_layers)
+    elif args.model_type == 'Nikos':
+        model = LiftProjectNetwork_Nikos(
+          grad_layer=construct_grad_layer(args),
+          in_channels=args.rank,
+          num_layers_lift=args.num_layers - args.num_layers_project,
+          num_layers_project=args.num_layers_project,
+        )
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
@@ -281,3 +289,37 @@ class GatedGCNLiftNetwork(torch.nn.Module):
         out = self.net(x=x, edge_index=edge_index)
         out = F.normalize(out, dim=1)
         return out
+
+class LiftLayerv2(torch.nn.Module):
+    def __init__(self, grad_layer, in_channels):
+        super().__init__()
+        self.grad_layer = grad_layer
+        self.lin = Linear(2*in_channels, in_channels)
+    def forward(self, x, edge_index, **kwargs):
+        grads = self.grad_layer(x, edge_index, **kwargs)
+        out = torch.cat((x, grads), 1)
+        out = self.lin(out)
+        out = F.normalize(out, dim=1)
+        return out
+class ProjectNetwork_r1(torch.nn.Module):
+    def __init__(self, grad_layer, in_channels, num_layers=6):
+        super().__init__()
+        self.layers = [LiftLayerv2(grad_layer, in_channels) for _ in range(num_layers)]
+        for i, layer in enumerate(self.layers):
+            self.add_module(f"layer_{i}", layer)
+        self.lin = Linear(in_channels, 1)
+    def forward(self, x, edge_index, **kwargs):
+        for l in self.layers:
+            x = F.leaky_relu(l(x, edge_index, **kwargs)+x,0.01)
+        x = F.normalize(x)
+        return x
+
+class LiftProjectNetwork_Nikos(torch.nn.Module):
+    def __init__(self, in_channels, num_layers_lift, num_layers_project, grad_layer, lift_file=None):
+        super().__init__()
+        self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift)
+        self.project_net = ProjectNetwork_r1(grad_layer, in_channels, num_layers=num_layers_project)
+    def forward(self, x, edge_index, **kwargs):
+        out = self.lift_net(x, edge_index, **kwargs)
+        outs = self.project_net(out, edge_index, **kwargs)
+        return outs
