@@ -50,9 +50,9 @@ def construct_dataset(args):
         dataset = RandomGraphIterableDataset(
                     num_nodes_per_graph=args.num_nodes_per_graph,
                     edge_probability=args.edge_probability,
-                    seed=args.data_seed,)
-                    #pre_transform=pre_transform,
-                    #transform=transform)
+                    seed=args.data_seed,
+                    pre_transform=pre_transform,
+                    transform=transform)
     elif args.dataset == 'ForcedRB':
         dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
                     num_graphs=args.num_graphs,
@@ -66,9 +66,9 @@ def construct_dataset(args):
         dataset = ForcedRBIterableDataset(
                     n_range=args.RB_n,
                     k_range=args.RB_k,
-                    seed=args.data_seed,)
-                    #pre_transform=pre_transform,
-                    #transform=transform)
+                    seed=args.data_seed,
+                    pre_transform=pre_transform,
+                    transform=transform)
     # TODO chordal graph generation
     elif args.dataset == 'TU':
         dataset = TUDataset(root=f'{data_root}',

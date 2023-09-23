@@ -3,15 +3,13 @@ from itertools import product
 import random
 import numpy as np
 import networkx as nx
-import json
-import time 
-import gurobipy as gp
-from gurobipy import GRB
 
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
+
+from data.generated import GeneratedDataset, GeneratedIterableDataset
 
 # Adapted from Nikos's Forced_RB.ipynb
 
@@ -66,95 +64,41 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
     G = G.to_undirected()
     return G
 
-class ForcedRBDataset(InMemoryDataset):
-    def __init__(self, root,
-                  num_graphs=1000, n_range=[10, 26], k_range=[5, 21],
-                  seed=0, parallel=0,
+class ForcedRBDataset(GeneratedDataset):
+    def __init__(self, root, num_graphs=1000, seed=0, parallel=0,
+                  n_range=[10, 26], k_range=[5, 21],
                   transform=None, pre_transform=None, pre_filter=None):
-        self.num_graphs = num_graphs
         self.n_range = n_range
         self.k_range = k_range
 
-        self.seed = seed
-        self.parallel = parallel
-
-        super(ForcedRBDataset, self).__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
-
-    @property
-    def raw_file_names(self):
-        # no files needed
-        return []
+        super(ForcedRBDataset, self).__init__(
+            root, num_graphs=num_graphs, seed=seed, parallel=parallel,
+            transform=transform,
+            pre_transform=pre_transform,
+            pre_filter=pre_filter)
 
     @property
     def processed_file_names(self):
         return [f'forcedRB_{self.num_graphs}_{self.seed}_{self.parallel}.pt']
 
-    def download(self):
-        # no download needed
-        pass
+    def generate(self, seed, **kwargs):
+        generator = np.random.default_rng(seed)
+        while True:
+            G = RB_model(generator=generator, n_range=self.n_range, k_range=self.k_range)
+            yield from_networkx(G)
 
-    def process(self):
-        # TODO actually handle parallel
-        # TODO use SeedSequence and multiprocessing here
-        generator = np.random.default_rng(self.seed)
-
-        data_list = []
-        for i in range(self.num_graphs):
-            G = RB_model(generator=generator)
-            data_list.append(from_networkx(G))
-            print(f'generated {i+1} of {self.num_graphs}')
-
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
-
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
-
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
-
-class ForcedRBIterableDataset(IterableDataset):
-    def __init__(self,
-                  num_graphs=1000, n_range=[10, 26], k_range=[5, 21],
-                  seed=0,
+class ForcedRBIterableDataset(GeneratedIterableDataset):
+    def __init__(self, seed=0,
+                  n_range=[10, 26], k_range=[5, 21],
                   transform=None, pre_transform=None, pre_filter=None):
-        self.num_graphs = num_graphs
         self.n_range = n_range
         self.k_range = k_range
 
-        self.seed = seed
+        super(ForcedRBIterableDataset, self).__init__(seed=seed,
+            transform=transform, pre_transform=pre_transform, pre_filter=pre_filter)
 
-        self.transform = transform
-        self.pre_transform = pre_transform
-        self.pre_filter = pre_filter
-
-        super(ForcedRBIterableDataset, self).__init__()
-
-    def __iter__(self):
-        # compute our seed
-        worker = get_worker_info()
-        if worker == None:
-            seed = self.seed
-        else:
-            # if we are a worker, we generate a seed
-            # as written this should put out 256 bits: collision is unlikely
-            seed = np.random.SeedSequence(entropy=self.seed, spawn_key=(worker.id,))
-
-        # initialize RNG
+    def generate(self, seed, **kwargs):
         generator = np.random.default_rng(seed)
-
-        # generate random graphs forever
         while True:
-            G = RB_model(generator=generator)
-            G = from_networkx(G)
-
-            # apply filters and transforms
-            if self.pre_filter is not None and not self.pre_filter(G):
-                continue
-            if self.pre_transform is not None:
-                G = self.pre_transform(G)
-            if self.transform is not None:
-                G = self.transform(G)
-
-            yield G
+            G = RB_model(generator=generator, n_range=self.n_range, k_range=self.k_range)
+            yield from_networkx(G)
