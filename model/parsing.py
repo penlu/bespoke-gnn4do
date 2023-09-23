@@ -108,7 +108,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Learning rate')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for training')
-    parser.add_argument('--valid_freq', type=int, default=0,
+    parser.add_argument('--valid_freq', type=int, default=1000,
                         help='Run validation every N steps/epochs (0 to never run validation)')
     parser.add_argument('--save_freq', type=int, default=0,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
@@ -167,7 +167,7 @@ def modify_train_args(args: Namespace):
     else:
         hashed_params = hash_dict(vars(args))
         #print(hashed_params)
-        args.log_dir = "training_runs/" + args.prefix + f"_paramhash:{hashed_params}"
+        args.log_dir = f"training_runs/{args.prefix}/paramhash:{hashed_params}"
     print("device", torch.cuda.is_available())
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")

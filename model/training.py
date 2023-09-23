@@ -133,7 +133,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
                     valid_start_time = time.time()
                     valid_loss, valid_score = validate(args, model, val_loader)
                     # save model if it's the current best
-                    if valid_score > max(valid_scores):
+                    if len(valid_scores)==0 or valid_score > max(valid_scores):
                         save_model(model, f"{model_folder}/best_model.pt")
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
