@@ -70,7 +70,7 @@ def validate(args, model, val_loader, criterion=None):
 
     return total_loss / total_count, total_score / total_count
 
-def train(args, model, train_loader, optimizer, criterion, val_loader=None):
+def train(args, model, train_loader, optimizer, criterion, val_loader=None, test_loader=None):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
@@ -81,6 +81,8 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
     train_losses = []
     valid_losses = []
     valid_scores = []
+    test_losses = []
+    test_scores = []
 
     model.to(args.device)
 
@@ -127,10 +129,19 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
                     valid_loss, valid_score = validate(args, model, val_loader)
+                    # save model if it's the current best
+                    if valid_score > max(valid_scores):
+                        save_model(model, f"{model_folder}/best_model.pt")
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
                     valid_time = time.time() - valid_start_time
                     print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} valid_loss={valid_loss} valid_score={valid_score}")
+                    
+                    # test
+                    if test_loader is not None:
+                        test_loss, test_score = validate(args, model, test_loader)
+                        test_losses.append(test_loss)
+                        test_scores.append(test_score)
 
                 # check if training is done
                 if steps >= args.steps:
@@ -173,6 +184,9 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
     np.save(os.path.join(args.log_dir, "train_losses.npy"), train_losses)
     np.save(os.path.join(args.log_dir, "valid_losses.npy"), valid_losses)
     np.save(os.path.join(args.log_dir, "valid_scores.npy"), valid_scores)
+    np.save(os.path.join(args.log_dir, "test_losses.npy"), test_losses)
+    np.save(os.path.join(args.log_dir, "test_scores.npy"), test_scores)
+
 
 def predict(model, loader, args):
     batches = []
