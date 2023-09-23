@@ -110,12 +110,12 @@ if __name__ == '__main__':
         if args.gurobi:
             start_time = time.time()
             if args.problem_type == 'max_cut':
-                x_gurobi, status = max_cut_gurobi(args, example)
+                x_gurobi, status, runtime = max_cut_gurobi(args, example)
             elif args.problem_type == 'vertex_cover':
-                set_size, x_gurobi, status = vertex_cover_gurobi(args, example)
+                x_gurobi, status, runtime = vertex_cover_gurobi(args, example)
             elif args.problem_type == 'max_clique':
                 # we do max clique by running VC on graph complement
-                set_size, x_gurobi, status = vertex_cover_gurobi(args, example)
+                x_gurobi, status, runtime = vertex_cover_gurobi(args, example)
             else:
                 raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
             gurobi_time = time.time() - start_time
@@ -129,6 +129,7 @@ if __name__ == '__main__':
                 'type': 'solver',
                 'status': status,
                 'time': gurobi_time,
+                'runtime': runtime, # as reported by m.Runtime
                 'score': float(gurobi_score),
                 #'penalty': float(gurobi_penalty),
                 'x': x_gurobi.tolist(),
