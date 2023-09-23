@@ -101,8 +101,9 @@ def construct_loaders(args, mode=None):
         elif mode is None:
             # TODO what to do about the validation set when infinite data?
             # TODO make the validation set size controllable
+            # TODO make the test_loader
             val_loader = DataLoader(list(itertools.islice(dataset, 100)), batch_size=args.batch_size, shuffle=False)
-            return train_loader, val_loader
+            return train_loader, val_loader, None
         else:
             raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
 
@@ -115,14 +116,16 @@ def construct_loaders(args, mode=None):
         # TODO make this depend on args for split size
         print("dataset size:", len(dataset))
         train_size = int(0.8 * len(dataset))
-        val_size = len(dataset) - train_size
+        val_size = (len(dataset) - train_size)//2
+        test_size = len(dataset) - train_size - val_size
 
         generator = torch.Generator().manual_seed(args.split_seed)
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
+        train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-        return train_loader, val_loader
+        return train_loader, val_loader, test_dataset
     else:
         raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
