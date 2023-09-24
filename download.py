@@ -4,7 +4,7 @@ import sys
 
 import torch
 
-from data.loader import construct_dataset
+from data.loader import construct_dataset, TU_datasets
 
 if len(sys.argv) == 2:
     problem_type = sys.argv[1]
@@ -18,26 +18,9 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-# construct random
-construct_dataset(dotdict({
-    'dataset': 'RANDOM',
-    'num_graphs': 1000,
-    'num_nodes_per_graph': 100,
-    'edge_probability': 0.15,
-    'problem_type': problem_type,
-}))
-
-# construct ForcedRB
-construct_dataset(dotdict({
-    'dataset': 'ForcedRB',
-    'num_graphs': 1000,
-    'problem_type': problem_type,
-}))
-
 # construct many TU datasets
-for TU_name in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
+for TU_name in TU_datasets:
     construct_dataset(dotdict({
-        'dataset': 'TU',
-        'TUdataset_name': TU_name,
+        'dataset': TU_name,
         'problem_type': problem_type,
     }))
