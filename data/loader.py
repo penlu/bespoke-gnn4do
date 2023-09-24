@@ -5,7 +5,7 @@ import itertools
 import torch
 from torch.utils.data import IterableDataset, random_split
 from torch_geometric.loader import DataLoader
-from torch_geometric.datasets import TUDataset
+from torch_geometric.datasets import TUDataset, PPI
 from torch_geometric.transforms import AddRandomWalkPE, Compose
 
 from data.generated import construct_generator, GeneratedDataset, GeneratedIterableDataset
@@ -25,6 +25,9 @@ TU_datasets = [
   'IMDB-BINARY',
   'MUTAG',
   'COLLAB',
+  'REDDIT-MULTI-5K',
+  'REDDIT-MULTI-12K',
+  'REDDIT-BINARY',
 ]
 
 def construct_dataset(args):
@@ -74,6 +77,11 @@ def construct_dataset(args):
                     name=args.dataset,
                     pre_transform=pre_transform,
                     transform=transform)
+    elif args.dataset == 'PPI':
+        # TODO they handle the split differently for this one. we're fetching the training split
+        dataset = PPI(root=f'{data_root}',
+                      pre_transform=pre_transform,
+                      transform=transform)
     else:
         raise ValueError(f"Invalid dataset passed into construct_dataset: {args.dataset}")
 
