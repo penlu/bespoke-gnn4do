@@ -2,6 +2,7 @@
 
 import math
 import os
+import argparse
 from argparse import ArgumentParser, Namespace
 
 import numpy as np
@@ -10,6 +11,17 @@ from datetime import datetime
 import json
 import hashlib
 
+# argparse custom action for enforcing variable number of args for an option
+# taken from https://stackoverflow.com/a/4195302
+def required_length(nmin, nmax):
+    class RequiredLength(argparse.Action):
+        def __call__(self, parser, args, values, option_string=None):
+            if not nmin <= len(values) <= nmax:
+                msg='argument "{f}" requires between {nmin} and {nmax} arguments'.format(
+                    f=self.dest, nmin=nmin, nmax=nmax)
+                raise argparse.ArgumentTypeError(msg)
+            setattr(args, self.dest, values)
+    return RequiredLength
 
 def add_general_args(parser: ArgumentParser):
     # General arguments
@@ -24,13 +36,18 @@ def add_general_args(parser: ArgumentParser):
 
 def add_dataset_args(parser: ArgumentParser):
     # Dataset arguments
-    parser.add_argument('--dataset', type=str, default='RANDOM',
+    parser.add_argument('--dataset', type=str, default='ErdosRenyi',
                         choices=[
-                            'RANDOM',
+                            'ErdosRenyi',
                             'ForcedRB',
-                            'TU',
-                            'RANDOM_inf',
-                            'ForcedRB_inf',
+                            'BarabasiAlbert',
+                            'PowerlawCluster',
+                            'WattsStrogatz',
+                            'ENZYMES',
+                            'PROTEINS',
+                            'IMDB-BINARY',
+                            'MUTAG',
+                            'COLLAB',
                         ],
                         help='Dataset type to use')
 
@@ -40,16 +57,21 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--parallel', type=int, default=0,
                         help='How many parallel workers to use for generating data?')
     parser.add_argument('--num_graphs', type=int, default=1000,
-                        help='When using generated datasets, how many graphs to generate?')
+                        help='When using generated datasets, how many graphs to generate? (Ignored when using --infinite)')
+    parser.add_argument('--infinite', type=bool, default=False,
+                        help='When using generated datasets, do infinite generation?')
 
-    # Arguments for random graphs
-    parser.add_argument('--num_nodes_per_graph', type=int, default=100,
-                        help='When using random graphs, how many nodes per graph?')
-    parser.add_argument('--edge_probability', type=float, default=0.15,
-                        help='When using random graphs, what probability per edge in graph?')
+    # Some generated dataset parameters
+    parser.add_argument('--gen_n', nargs='+', type=int, default=100, action=required_length(1, 2),
+                        help='Range for the n parameter of generated dataset (usually number of vertices)')
+    parser.add_argument('--gen_m', type=int, default=4,
+                        help='m parameter of generated dataset (meaning varies)')
+    parser.add_argument('--gen_k', type=int, default=4,
+                        help='k parameter of generated dataset (meaning varies)')
+    parser.add_argument('--gen_p', type=float, default=0.25,
+                        help='p parameter of generated dataset (meaning varies)')
 
     # Arguments for ForcedRB graphs
-    # TODO
     parser.add_argument('--RB_n', nargs=2, type=int, default=[10, 26],
                         help='For ForcedRB, how many disjoint cliques? This upper bounds maximum independent set size. Provide two numbers for range [a, b).')
     parser.add_argument('--RB_k', nargs=2, type=int, default=[5, 21],
@@ -80,7 +102,7 @@ def add_train_args(parser: ArgumentParser):
     :param parser: An ArgumentParser.
     """
     # Model construction arguments
-    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN', 'NegationGAT', 'ProjectMP'],
+    parser.add_argument('--model_type', type=str, default='LiftMP', choices=['LiftMP', 'FullMP', 'GIN', 'GAT', 'GCNN', 'GatedGCNN', 'NegationGAT', 'ProjectMP', 'Nikos'],
                         help='Which type of model to use')
     parser.add_argument('--num_layers', type=int, default=12,
                         help='How many layers?')
@@ -108,7 +130,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Learning rate')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for training')
-    parser.add_argument('--valid_freq', type=int, default=0,
+    parser.add_argument('--valid_freq', type=int, default=1000,
                         help='Run validation every N steps/epochs (0 to never run validation)')
     parser.add_argument('--save_freq', type=int, default=0,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
@@ -147,7 +169,7 @@ def modify_train_args(args: Namespace):
         model_args = read_params_from_folder(model_folder)
         print(model_args.keys())
         print("WARNING, please check the list of relevant_keys")
-        relevant_keys = ['problem_type', 
+        pretrain_config_keys = ['problem_type', 
                          'model_type', 
                          'num_layers', 
                          'num_layers_project', 
@@ -157,8 +179,9 @@ def modify_train_args(args: Namespace):
                          'heads', 
                          'positional_encoding',
                          'pe_dimension',
-                         'repeat_lift_layers']
-        for k in relevant_keys:
+                         'repeat_lift_layers',
+                         'lift_file']
+        for k in pretrain_config_keys:
             setattr(args, k, model_args[k])
 
     # TODO add real logger functionality
@@ -167,7 +190,7 @@ def modify_train_args(args: Namespace):
     else:
         hashed_params = hash_dict(vars(args))
         #print(hashed_params)
-        args.log_dir = "training_runs/" + args.prefix + f"_paramhash:{hashed_params}"
+        args.log_dir = f"training_runs/{args.prefix}/paramhash:{hashed_params}"
     print("device", torch.cuda.is_available())
     setattr(
         args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")

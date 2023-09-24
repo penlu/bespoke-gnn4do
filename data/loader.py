@@ -8,9 +8,24 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 from torch_geometric.transforms import AddRandomWalkPE, Compose
 
-from data.forced_rb_dataset import ForcedRBDataset, ForcedRBIterableDataset
-from data.random_dataset import RandomGraphDataset, RandomGraphIterableDataset
+from data.generated import construct_generator, GeneratedDataset, GeneratedIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
+
+generated_datasets = [
+  'ErdosRenyi',
+  'ForcedRB',
+  'BarabasiAlbert',
+  'PowerlawCluster',
+  'WattsStrogatz',
+]
+
+TU_datasets = [
+  'ENZYMES',
+  'PROTEINS',
+  'IMDB-BINARY',
+  'MUTAG',
+  'COLLAB',
+]
 
 def construct_dataset(args):
     # precompute laplacian eigenvectors unconditionally
@@ -37,42 +52,26 @@ def construct_dataset(args):
     else:
         data_root = 'datasets'
 
-    if args.dataset == 'RANDOM':
-        dataset = RandomGraphDataset(root=f'{data_root}/random',
-                    num_graphs=args.num_graphs,
-                    num_nodes_per_graph=args.num_nodes_per_graph,
-                    edge_probability=args.edge_probability,
-                    seed=args.data_seed,
-                    parallel=args.parallel,
-                    pre_transform=pre_transform,
-                    transform=transform)
-    elif args.dataset == 'RANDOM_inf':
-        dataset = RandomGraphIterableDataset(
-                    num_nodes_per_graph=args.num_nodes_per_graph,
-                    edge_probability=args.edge_probability,
-                    seed=args.data_seed,)
-                    #pre_transform=pre_transform,
-                    #transform=transform)
-    elif args.dataset == 'ForcedRB':
-        dataset = ForcedRBDataset(root=f'{data_root}/forced_rb',
-                    num_graphs=args.num_graphs,
-                    n_range=args.RB_n,
-                    k_range=args.RB_k,
-                    seed=args.data_seed,
-                    parallel=args.parallel,
-                    pre_transform=pre_transform,
-                    transform=transform)
-    elif args.dataset == 'ForcedRB_inf':
-        dataset = ForcedRBIterableDataset(
-                    n_range=args.RB_n,
-                    k_range=args.RB_k,
-                    seed=args.data_seed,)
-                    #pre_transform=pre_transform,
-                    #transform=transform)
-    # TODO chordal graph generation
-    elif args.dataset == 'TU':
+    if args.dataset in generated_datasets:
+        generator, name = construct_generator(args)
+        if not args.infinite:
+            dataset = GeneratedDataset(root=f'{data_root}/generated',
+                        name=name,
+                        generator=generator,
+                        num_graphs=args.num_graphs,
+                        seed=args.data_seed,
+                        parallel=args.parallel,
+                        pre_transform=pre_transform,
+                        transform=transform)
+        else:
+            dataset = GeneratedIterableDataset(
+                        generator=generator,
+                        seed=args.data_seed,
+                        pre_transform=pre_transform,
+                        transform=transform)
+    elif args.dataset in TU_datasets:
         dataset = TUDataset(root=f'{data_root}',
-                    name=args.TUdataset_name,
+                    name=args.dataset,
                     pre_transform=pre_transform,
                     transform=transform)
     else:
@@ -99,10 +98,11 @@ def construct_loaders(args, mode=None):
         if mode == "test":
             return train_loader
         elif mode is None:
-            # TODO what to do about the validation set when infinite data?
-            # TODO make the validation set size controllable
+            # TODO make the validation set size controllable from args
+            # TODO make the test_loader
             val_loader = DataLoader(list(itertools.islice(dataset, 100)), batch_size=args.batch_size, shuffle=False)
-            return train_loader, val_loader
+            test_loader = DataLoader(list(itertools.islice(dataset, 100)), batch_size=args.batch_size, shuffle=False)
+            return train_loader, val_loader, test_loader
         else:
             raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
 
@@ -115,14 +115,17 @@ def construct_loaders(args, mode=None):
         # TODO make this depend on args for split size
         print("dataset size:", len(dataset))
         train_size = int(0.8 * len(dataset))
-        val_size = len(dataset) - train_size
+        val_size = (len(dataset) - train_size)//2
+        test_size = len(dataset) - train_size - val_size
 
         generator = torch.Generator().manual_seed(args.split_seed)
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
+        train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-        return train_loader, val_loader
+        
+        return train_loader, val_loader, test_loader
     else:
         raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")

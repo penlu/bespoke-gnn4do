@@ -71,7 +71,7 @@ def validate(args, model, val_loader, criterion=None):
 
     return total_loss / total_count, total_score / total_count
 
-def train(args, model, train_loader, optimizer, criterion, val_loader=None):
+def train(args, model, train_loader, optimizer, criterion, val_loader=None, test_loader=None):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
@@ -82,6 +82,8 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
     train_losses = []
     valid_losses = []
     valid_scores = []
+    test_losses = []
+    test_scores = []
 
     model.to(args.device)
 
@@ -122,14 +124,13 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
             epoch_total_loss += loss.cpu().detach().numpy()
             epoch_count += batch.num_graphs
 
-            # TODO would be nice to get periodic training loss printouts for infinite datasets
-
             steps += 1
             if args.stepwise:
-                if steps % 100 == 0:
+                # occasionally print training loss for infinite datasets
+                if args.infinite and steps % 100 == 0:
                     epoch_time = time.time() - start_time
                     epoch_avg_loss = epoch_total_loss / epoch_count
-                    print(f"hundred_step={int(steps // 100)} t={epoch_time:0.2f} steps={steps} epoch_avg_loss={epoch_avg_loss:0.2f}")
+                    print(f"steps={steps} t={epoch_time:0.2f} epoch_avg_loss={epoch_avg_loss:0.2f}")
 
                     start_time = time.time()
                     epoch_total_loss = 0.
@@ -139,10 +140,25 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
                     valid_loss, valid_score = validate(args, model, val_loader)
+                    # save model if it's the current best
+                    if len(valid_scores)==0 or valid_score > max(valid_scores):
+                        save_model(model, f"{model_folder}/best_model.pt")
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
                     valid_time = time.time() - valid_start_time
-                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} valid_loss={valid_loss} valid_score={valid_score}")
+                    
+                    # test
+                    if test_loader is not None:
+                        test_loss, test_score = validate(args, model, test_loader)
+                        test_losses.append(test_loss)
+                        test_scores.append(test_score)
+                    else:
+                        test_loss = np.inf
+                        test_score = -np.inf
+
+                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} \n\
+                                valid_loss={valid_loss} valid_score={valid_score} \n\
+                                test_loss={test_loss} test_score={test_score}")
 
                 # check if training is done
                 if steps >= args.steps:
@@ -185,6 +201,9 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
     np.save(os.path.join(args.log_dir, "train_losses.npy"), train_losses)
     np.save(os.path.join(args.log_dir, "valid_losses.npy"), valid_losses)
     np.save(os.path.join(args.log_dir, "valid_scores.npy"), valid_scores)
+    np.save(os.path.join(args.log_dir, "test_losses.npy"), test_losses)
+    np.save(os.path.join(args.log_dir, "test_scores.npy"), test_scores)
+
 
 def predict(model, loader, args):
     batches = []

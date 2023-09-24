@@ -20,12 +20,12 @@ if __name__ == '__main__':
     json.dump(vars(args), open(os.path.join(args.log_dir, 'params.txt'), 'w'))
 
     # get data, model
-    train_loader, val_loader = construct_loaders(args)
+    train_loader, val_loader, test_loader = construct_loaders(args)
     model, optimizer = construct_model(args)
     criterion = get_loss_fn(args)
 
     # train model
-    train(args, model, train_loader, optimizer, criterion, val_loader=val_loader)
+    train(args, model, train_loader, optimizer, criterion, val_loader=val_loader, test_loader=test_loader)
 
     # run final validation
     valid_loss = validate(args, model, val_loader, criterion)
