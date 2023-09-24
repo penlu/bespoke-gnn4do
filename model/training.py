@@ -126,6 +126,15 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None):
 
             steps += 1
             if args.stepwise:
+                if steps % 100 == 0:
+                    epoch_time = time.time() - start_time
+                    epoch_avg_loss = epoch_total_loss / epoch_count
+                    print(f"hundred_step={int(steps // 100)} t={epoch_time:0.2f} steps={steps} epoch_avg_loss={epoch_avg_loss:0.2f}")
+
+                    start_time = time.time()
+                    epoch_total_loss = 0.
+                    epoch_count = 0
+
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()

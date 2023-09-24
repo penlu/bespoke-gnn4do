@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o 230901_VC.%j.out
-#SBATCH --job-name="230901_VC"
+#SBATCH -o 230920_clique_train.%j.out
+#SBATCH --job-name="230920_clique_train"
 #SBATCH -N 1
 #SBATCH -c 4
 #SBATCH --gres=gpu:volta:1
@@ -24,8 +24,9 @@ fi
 echo "Job ID $SLURM_JOB_ID"
 echo "model=$MODEL dataset=$DATASET type=$TYPE"
 python -u train.py \
-  --problem_type=vertex_cover --vc_penalty=2 \
+  --problem_type=max_clique --vc_penalty=1 \
   --stepwise=True --steps=50000 \
-  --valid_freq=100 --dropout=0 \
-  --prefix=230901_VC \
+  --valid_freq=1000 --dropout=0 \
+  --prefix=230920_clique \
+  --positional_encoding=laplacian_eigenvector --pe_dimension=8 \
   --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE

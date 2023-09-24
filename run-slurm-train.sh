@@ -12,8 +12,8 @@ run_job () {
 }
 export -f run_job
 
-for model in 'LiftMP' ; do
-    for dataset in 'RANDOM' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
+for model in 'LiftMP' 'GIN' 'GAT' 'GCNN' 'GatedGCNN' 'NegationGAT' ; do
+    for dataset in 'RANDOM' 'ForcedRB' 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         echo $model $dataset
     done
 done | xargs -I{} bash -c "run_job '{}'"
