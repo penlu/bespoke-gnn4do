@@ -10,6 +10,9 @@ from torch_geometric.transforms import AddRandomWalkPE, Compose
 
 from data.forced_rb_dataset import ForcedRBDataset, ForcedRBIterableDataset
 from data.random_dataset import RandomGraphDataset, RandomGraphIterableDataset
+from data.random_dataset import BarabasiAlbertDataset, BarabasiAlbertIterableDataset
+from data.random_dataset import PowerlawClusterDataset, PowerlawClusterIterableDataset
+from data.random_dataset import WattsStrogatzDataset, WattsStrogatzIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
 
 def construct_dataset(args):

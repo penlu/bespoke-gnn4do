@@ -3,10 +3,6 @@ from itertools import product
 import random
 import numpy as np
 import networkx as nx
-
-import torch
-from torch.utils.data import IterableDataset, get_worker_info
-from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
 
 from data.generated import GeneratedDataset, GeneratedIterableDataset
@@ -65,17 +61,11 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
     return G
 
 class ForcedRBDataset(GeneratedDataset):
-    def __init__(self, root, num_graphs=1000, seed=0, parallel=0,
-                  n_range=[10, 26], k_range=[5, 21],
-                  transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, n_range=[10, 26], k_range=[5, 21], **kwargs):
         self.n_range = n_range
         self.k_range = k_range
 
-        super(ForcedRBDataset, self).__init__(
-            root, num_graphs=num_graphs, seed=seed, parallel=parallel,
-            transform=transform,
-            pre_transform=pre_transform,
-            pre_filter=pre_filter)
+        super(ForcedRBDataset, self).__init__(root, **kwargs)
 
     @property
     def processed_file_names(self):
@@ -88,14 +78,11 @@ class ForcedRBDataset(GeneratedDataset):
             yield from_networkx(G)
 
 class ForcedRBIterableDataset(GeneratedIterableDataset):
-    def __init__(self, seed=0,
-                  n_range=[10, 26], k_range=[5, 21],
-                  transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, n_range=[10, 26], k_range=[5, 21], **kwargs):
         self.n_range = n_range
         self.k_range = k_range
 
-        super(ForcedRBIterableDataset, self).__init__(seed=seed,
-            transform=transform, pre_transform=pre_transform, pre_filter=pre_filter)
+        super(ForcedRBIterableDataset, self).__init__(**kwargs)
 
     def generate(self, seed, **kwargs):
         generator = np.random.default_rng(seed)

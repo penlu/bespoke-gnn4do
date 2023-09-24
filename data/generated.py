@@ -6,14 +6,12 @@ from torch.utils.data import IterableDataset, get_worker_info
 from torch_geometric.data import InMemoryDataset
 
 class GeneratedDataset(InMemoryDataset):
-    def __init__(self, root, num_graphs=1000, seed=0, parallel=0,
-                  transform=None, pre_transform=None, pre_filter=None,
-                  **kwargs):
+    def __init__(self, root, filename, generator,
+                  num_graphs=1000, seed=0, parallel=0,
+                  transform=None, pre_transform=None, pre_filter=None):
         self.num_graphs = num_graphs
         self.seed = seed
         self.parallel = parallel
-
-        self.kwargs = kwargs
 
         super(GeneratedDataset, self).__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
@@ -22,7 +20,7 @@ class GeneratedDataset(InMemoryDataset):
     def processed_file_names(self):
         raise NotImplementedError('Please override this method.')
 
-    def generate(self, seed, **kwargs):
+    def generate(self, seed):
         raise NotImplementedError('Please override this method.')
 
     def process(self):
@@ -37,7 +35,7 @@ class GeneratedDataset(InMemoryDataset):
 
         # generate graphs and save
         # TODO doing this in parallel when requested
-        data_list = list(itertools.islice(self.generate(seed, **self.kwargs), self.num_graphs))
+        data_list = list(itertools.islice(self.generate(seed), self.num_graphs))
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
@@ -50,11 +48,8 @@ class GeneratedDataset(InMemoryDataset):
 
 class GeneratedIterableDataset(IterableDataset):
     def __init__(self, seed=0,
-                  transform=None, pre_transform=None, pre_filter=None,
-                  **kwargs):
+                  transform=None, pre_transform=None, pre_filter=None):
         self.seed = seed
-
-        self.kwargs = kwargs
 
         self.transform = transform
         self.pre_transform = pre_transform
@@ -62,7 +57,7 @@ class GeneratedIterableDataset(IterableDataset):
 
         super(GeneratedIterableDataset, self).__init__()
 
-    def generate(self, seed, **kwargs):
+    def generate(self, seed):
         raise NotImplementedError('Please override this method.')
 
     def __iter__(self):
@@ -76,7 +71,7 @@ class GeneratedIterableDataset(IterableDataset):
             seed = np.random.SeedSequence(entropy=self.seed, spawn_key=(worker.id,)).generate_state(8)
 
         # generate graphs forever
-        for G in self.generate(seed, **self.kwargs):
+        for G in self.generate(seed):
             # apply filters and transforms
             if self.pre_filter is not None and not self.pre_filter(G):
                 continue
