@@ -93,7 +93,7 @@ def vertex_cover_sdp(args, example):
 
     # Create the problem and solve it
     problem = cp.Problem(objective, constraints)
-    problem.solve(solver=cp.SCS)
+    problem.solve(solver=cp.MOSEK)
 
     X = X.value
 
