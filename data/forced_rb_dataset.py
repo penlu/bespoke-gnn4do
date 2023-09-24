@@ -5,8 +5,6 @@ import numpy as np
 import networkx as nx
 from torch_geometric.utils.convert import from_networkx
 
-from data.generated import GeneratedDataset, GeneratedIterableDataset
-
 # Adapted from Nikos's Forced_RB.ipynb
 
 ## RB MODEL for hard independent set instances: 
@@ -60,32 +58,8 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
     G = G.to_undirected()
     return G
 
-class ForcedRBDataset(GeneratedDataset):
-    def __init__(self, root, n_range=[10, 26], k_range=[5, 21], **kwargs):
-        self.n_range = n_range
-        self.k_range = k_range
-
-        super(ForcedRBDataset, self).__init__(root, **kwargs)
-
-    @property
-    def processed_file_names(self):
-        return [f'forcedRB_{self.num_graphs}_{self.seed}_{self.parallel}.pt']
-
-    def generate(self, seed, **kwargs):
-        generator = np.random.default_rng(seed)
-        while True:
-            G = RB_model(generator=generator, n_range=self.n_range, k_range=self.k_range)
-            yield from_networkx(G)
-
-class ForcedRBIterableDataset(GeneratedIterableDataset):
-    def __init__(self, n_range=[10, 26], k_range=[5, 21], **kwargs):
-        self.n_range = n_range
-        self.k_range = k_range
-
-        super(ForcedRBIterableDataset, self).__init__(**kwargs)
-
-    def generate(self, seed, **kwargs):
-        generator = np.random.default_rng(seed)
-        while True:
-            G = RB_model(generator=generator, n_range=self.n_range, k_range=self.k_range)
-            yield from_networkx(G)
+def forced_rb_generator(seed, n=[10, 26], k=[5, 21]):
+    generator = np.random.default_rng(seed)
+    while True:
+        G = RB_model(generator=generator, n_range=n, k_range=k)
+        yield from_networkx(G)

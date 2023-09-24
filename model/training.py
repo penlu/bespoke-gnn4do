@@ -124,10 +124,18 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             epoch_total_loss += loss.cpu().detach().numpy()
             epoch_count += batch.num_graphs
 
-            # TODO would be nice to get periodic training loss printouts for infinite datasets
-
             steps += 1
             if args.stepwise:
+                # occasionally print training loss for infinite datasets
+                if args.infinite and steps % 100 == 0:
+                    epoch_time = time.time() - start_time
+                    epoch_avg_loss = epoch_total_loss / epoch_count
+                    print(f"steps={steps} t={epoch_time:0.2f} epoch_avg_loss={epoch_avg_loss:0.2f}")
+
+                    start_time = time.time()
+                    epoch_total_loss = 0.
+                    epoch_count = 0
+
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
