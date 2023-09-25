@@ -27,5 +27,5 @@ python -u train.py \
     --model_type=$MODEL --dataset=$DATASET \
     --num_layers=$LIFT_LAYERS --rank=$R \
     --vc_penalty=$PENALTY --problem_type=vertex_cover \
-    --positional_encoding=laplacian_eigenvector --pe_dimension=$((R/2))
+    --positional_encoding=laplacian_eigenvector --pe_dimension=$((R/2)) \
     --batch_size=16
