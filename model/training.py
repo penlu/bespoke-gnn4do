@@ -13,7 +13,7 @@ def featurize_batch(args, batch):
     N = batch.num_nodes
     num_edges = batch.edge_index.shape[1]
 
-    if args.positional_encoding is None:
+    if args.positional_encoding is None or args.pe_dimension == 0:
         # generate random vector input
         x_in = torch.randn((N, args.rank), dtype=torch.float, device=args.device)
         x_in = F.normalize(x_in, dim=1)
