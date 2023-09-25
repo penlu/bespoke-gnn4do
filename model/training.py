@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from model.saving import save_model
 from model.losses import get_loss_fn, get_score_fn
-from utils.baselines import random_hyperplane_projector
+from utils.baselines import random_hyperplane_projector, get_greedy_fn
 
 def featurize_batch(args, batch):
     N = batch.num_nodes
@@ -44,6 +44,7 @@ def featurize_batch(args, batch):
 def validate(args, model, val_loader, criterion=None):
     loss_fn = get_loss_fn(args)
     score_fn = get_score_fn(args)
+    greedy_fn = get_greedy_fn(args)
 
     total_loss = 0.
     total_score = 0.
@@ -63,7 +64,13 @@ def validate(args, model, val_loader, criterion=None):
                 total_loss += loss.cpu().detach().numpy()
 
                 x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
-                # TODO XXX add greedy here to ENSURE we are getting a binary vector out
+
+                # greedy here to ENSURE we are getting a +/- 1 vector out
+                x_proj = greedy_fn(args, x_proj, example, score_fn)
+                num_zeros = (x_proj == 0).count_nonzero()
+                assert num_zeros == 0
+
+                # count the score
                 score = score_fn(args, x_proj, example)
                 total_score += score.cpu().detach().numpy()
 
