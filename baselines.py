@@ -4,6 +4,7 @@ import itertools
 import json
 import os
 import time
+import traceback
 
 import torch
 from torch.utils.data import IterableDataset, random_split
@@ -77,7 +78,15 @@ if __name__ == '__main__':
         for lift_name, lift_fn in lift_fns.items():
             # calculate lift output and save score
             start_time = time.time()
-            x_lift = torch.FloatTensor(lift_fn(args, example))
+            try:
+                x_lift, status, runtime = lift_fn(args, example)
+                x_lift = torch.FloatTensor(x_lift)
+            except:
+                # if it blows up, we just ignore this example and move on.
+                # blowing up is probably due to MOSEK timeout
+                traceback.print_exc()
+                print(f"Caught exception at example {i} method {lift_name}; skipping.")
+                continue
             lift_time = time.time() - start_time
 
             # NOTE: no penalty in return
@@ -86,7 +95,9 @@ if __name__ == '__main__':
                 'index': i,
                 'method': lift_name,
                 'type': 'lift',
+                'status': status,
                 'time': lift_time,
+                'runtime': runtime, # as reported by problem.solver_stats.solve_time
                 'score': float(lift_score),
                 #'penalty': float(lift_penalty),
                 'x': x_lift.tolist(),

@@ -14,7 +14,7 @@ DATASET=$1
 echo "Job ID $SLURM_JOB_ID"
 echo "dataset=$DATASET"
 
-python -u baselines.py --dataset $DATASET \
+python baselines.py --dataset $DATASET --infinite=True --parallel=20 --RB_n 30 60 --RB_k 15 27 \
   --problem_type vertex_cover \
   --prefix 230924_sdp_$DATASET \
   --sdp=True

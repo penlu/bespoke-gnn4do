@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.utils import to_dense_adj, to_torch_csr_tensor, to_networkx
 import networkx as nx
+import mosek
 
 
 def max_cut_sdp(args, example):
@@ -58,7 +59,7 @@ def max_cut_sdp(args, example):
     V = np.linalg.cholesky(X)
     #print('Cholesky Decomposition:', V)
 
-    return V
+    return V, prob.status, prob.solver_stats.solve_time
 
 def max_cut_bm():
     pass # TODO
@@ -93,7 +94,7 @@ def vertex_cover_sdp(args, example):
 
     # Create the problem and solve it
     problem = cp.Problem(objective, constraints)
-    problem.solve(solver=cp.MOSEK)
+    problem.solve(solver=cp.MOSEK, mosek_params={mosek.dparam.optimizer_max_time: 10})
 
     X = X.value
 
@@ -108,7 +109,7 @@ def vertex_cover_sdp(args, example):
 
     V = V[1:N+1,:]
 
-    return V
+    return V, problem.status, problem.solver_stats.solve_time
 
 def vertex_cover_bm():
     pass # TODO
