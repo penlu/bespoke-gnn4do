@@ -17,12 +17,13 @@ run_job () {
         --prefix=230924_hparam_TU \
         --model_type=$MODEL --dataset=$DATASET \
         --num_layers=$LIFT_LAYERS --rank=$R --vc_penalty=$PENALTY --problem_type=vertex_cover \
+        --positional_encoding=laplacian_eigenvector --pe_dimension=$((R/2)) \
         --batch_size=16
 }
 export -f run_job
 
 for model in 'LiftMP' 'Nikos' ; do
-    for dataset in 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' 'REDDIT-MULTI-5K' 'REDDIT-MULTI-12K' 'REDDIT-BINARY'; do
+    for dataset in 'ENZYMES' 'PROTEINS' 'IMDB-BINARY' 'MUTAG' 'COLLAB' ; do
         for penalty in '1' ; do
             for r in '4' '8' '16' ; do
                 for lift_layers in '1' '4' '8' '12' ; do
