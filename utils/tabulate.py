@@ -8,8 +8,6 @@ from pathlib import Path
 from torch_geometric.datasets import TUDataset
 from torch_geometric.loader import DataLoader
 
-from data.loader import RandomGraphDataset
-
 # Utils for making pandas dataframe tables
 
 def load_datasets():
