@@ -7,19 +7,12 @@ run_job () {
     MODEL=${JOBARRAY[0]}
     DATASET=${JOBARRAY[1]}
     SLOT=$2
-    if [ $DATASET = 'RANDOM' ] ; then
-        TYPE='RANDOM'
-    elif [ $DATASET = 'ForcedRB' ] ; then
-        TYPE='ForcedRB'
-    else
-        TYPE='TU'
-    fi
-    echo $MODEL $TYPE $DATASET $((SLOT - 1))
+    echo $MODEL $DATASET $((SLOT - 1))
     CUDA_VISIBLE_DEVICES=$((SLOT - 1)) python train.py \
         --stepwise=True --steps=50000 \
         --valid_freq=1000 --dropout=0 \
-        --prefix=230910_VC_forcedrb_test \
-        --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE \
+        --prefix=230924_test \
+        --model_type=$MODEL --dataset=$DATASET \
         --problem_type=vertex_cover --vc_penalty=1
 }
 export -f run_job

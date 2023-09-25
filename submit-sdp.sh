@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -o 230923_sdp.%j.out
+#SBATCH -o 230924_sdp.%j.out
 #SBATCH --job-name="230923_sdp"
 #SBATCH -c 48
 #SBATCH --time=72:00:00          # total run time limit (HH:MM:SS)
@@ -11,17 +11,10 @@ source activate test3
 
 DATASET=$1
 
-if [ $DATASET = 'RANDOM' ] ; then
-    TYPE='RANDOM'
-elif [ $DATASET = 'ForcedRB' ] ; then
-    TYPE='ForcedRB'
-else
-    TYPE='TU'
-fi
 echo "Job ID $SLURM_JOB_ID"
-echo "dataset=$DATASET type=$TYPE"
+echo "dataset=$DATASET"
 
-python -u baselines.py --dataset $TYPE \
+python -u baselines.py --dataset $DATASET \
   --problem_type vertex_cover \
-  --prefix 230923_sdp_vertex_cover_$DATASET --TUdataset_name $DATASET \
+  --prefix 230924_sdp_$DATASET \
   --sdp=True

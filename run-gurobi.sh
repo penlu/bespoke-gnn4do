@@ -13,16 +13,9 @@ fi
 for TIMEOUT in 1 5 20 ; do
     for DATASET in RANDOM ENZYMES PROTEINS IMDB-BINARY MUTAG COLLAB ForcedRB; do
         echo $DATASET
-        if [ $DATASET = 'RANDOM' ] ; then
-            TYPE='RANDOM'
-        elif [ $DATASET = 'ForcedRB' ] ; then
-            TYPE='ForcedRB'
-        else
-            TYPE='TU'
-        fi
-        python baselines.py --dataset $TYPE \
+        python baselines.py --dataset $DATASET \
           --problem_type $1 \
-          --prefix 230920_gurobi_$1_${TIMEOUT}s_$DATASET --TUdataset_name $DATASET \
+          --prefix 230924_gurobi_$1_${TIMEOUT}s_$DATASET \
           --gurobi True --gurobi_timeout $TIMEOUT
     done
 done

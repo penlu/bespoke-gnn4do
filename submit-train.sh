@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH -o 230920_clique_train.%j.out
-#SBATCH --job-name="230920_clique_train"
+#SBATCH -o 230924_train.%j.out
+#SBATCH --job-name="230924_train"
 #SBATCH -N 1
-#SBATCH -c 4
+#SBATCH -c 20
 #SBATCH --gres=gpu:volta:1
 #SBATCH --time=72:00:00          # total run time limit (HH:MM:SS)
 
@@ -14,19 +14,12 @@ source activate test3
 MODEL=$1
 DATASET=$2
 
-if [ $DATASET = 'RANDOM' ] ; then
-    TYPE='RANDOM'
-elif [ $DATASET = 'ForcedRB' ] ; then
-    TYPE='ForcedRB'
-else
-    TYPE='TU'
-fi
 echo "Job ID $SLURM_JOB_ID"
-echo "model=$MODEL dataset=$DATASET type=$TYPE"
+echo "model=$MODEL dataset=$DATASET"
 python -u train.py \
-  --problem_type=max_clique --vc_penalty=1 \
-  --stepwise=True --steps=50000 \
+  --problem_type=vertex_cover --vc_penalty=1 \
+  --stepwise=True --steps=100000 \
   --valid_freq=1000 --dropout=0 \
-  --prefix=230920_clique \
+  --prefix=230924_train \
   --positional_encoding=laplacian_eigenvector --pe_dimension=8 \
-  --model_type=$MODEL --TUdataset_name=$DATASET --dataset=$TYPE
+  --model_type=$MODEL --dataset=$DATASET
