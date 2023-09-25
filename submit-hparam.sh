@@ -24,6 +24,6 @@ python -u train.py \
     --stepwise=True --steps=100000 \
     --valid_freq=1000 --dropout=0 \
     --prefix=230924_hparam \
-    --model_type=$MODEL --dataset=$DATASET --parallel=20 \
+    --model_type=$MODEL --dataset=$DATASET --parallel=20 --infinite \
     --num_layers=$LIFT_LAYERS --rank=$R \
     --vc_penalty=$PENALTY --problem_type=vertex_cover
