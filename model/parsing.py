@@ -83,10 +83,6 @@ def add_dataset_args(parser: ArgumentParser):
     # Arguments for chordal graphs
     # TODO
 
-    # Arguments for TU datasets
-    parser.add_argument('--TUdataset_name', type=str, default=None,
-                        help='When using TU dataset, which dataset to use?')
-
     # Positional encoding arguments
     parser.add_argument('--positional_encoding', type=str, default=None,
                         choices=['laplacian_eigenvector', 'random_walk'],
@@ -138,7 +134,7 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--save_freq', type=int, default=0,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
     parser.add_argument('--vc_penalty', type=float, default=None,
-                        help='Penalty for failed cover in vertex cover')
+                        help='Penalty for missed edges in vertex cover')
 
     parser.add_argument('--stepwise', type=bool, default=True,
                         help='Train by number of gradient steps or number of epochs?')
