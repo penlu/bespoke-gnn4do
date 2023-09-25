@@ -11,17 +11,20 @@ from data.forced_rb_dataset import forced_rb_generator
 
 def construct_generator(args):
     if args.dataset == 'ErdosRenyi':
-        generator = lambda seed: erdos_renyi_generator(seed, n=args.gen_n, p=args.gen_p)
-        name = f'erdos_renyi_n{args.gen_n}_p{args.gen_p}'
+        gen_p = 0.15 if args.gen_p == None else args.gen_p
+        generator = lambda seed: erdos_renyi_generator(seed, n=args.gen_n, p=gen_p)
+        name = f'erdos_renyi_n{args.gen_n}_p{gen_p}'
     elif args.dataset == 'BarabasiAlbert':
         generator = lambda seed: barabasi_albert_generator(seed, n=args.gen_n, m=args.gen_m)
         name = f'barabasi_albert_n{args.gen_n}_m{args.gen_m}'
     elif args.dataset == 'PowerlawCluster':
-        generator = lambda seed: powerlaw_cluster_generator(seed, n=args.gen_n, m=args.gen_m, p=args.gen_p)
-        name = f'powerlaw_cluster_n{args.gen_n}_m{args.gen_m}_p{args.gen_p}'
+        gen_p = 0.25 if args.gen_p == None else args.gen_p
+        generator = lambda seed: powerlaw_cluster_generator(seed, n=args.gen_n, m=args.gen_m, p=gen_p)
+        name = f'powerlaw_cluster_n{args.gen_n}_m{args.gen_m}_p{gen_p}'
     elif args.dataset == 'WattsStrogatz':
-        generator = lambda seed: watts_strogatz_generator(seed, n=args.gen_n, k=args.gen_k, p=args.gen_p)
-        name = f'watts_strogatz_n{args.gen_n}_k{args.gen_k}_p{args.gen_p}'
+        gen_p = 0.25 if args.gen_p == None else args.gen_p
+        generator = lambda seed: watts_strogatz_generator(seed, n=args.gen_n, k=args.gen_k, p=gen_p)
+        name = f'watts_strogatz_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
     elif args.dataset == 'ForcedRB':
         generator = lambda seed: forced_rb_generator(seed, n=args.RB_n, k=args.RB_k)
         name = f'forced_rb_n{args.RB_n}_k{args.RB_k}'

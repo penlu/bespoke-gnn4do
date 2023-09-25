@@ -117,11 +117,13 @@ def vertex_cover_bm():
 def vertex_cover_autograd():
     pass # TODO
 
+# returns a torch.FloatTensor size (N, 1)
 def e1_projector(args, x_lift, example, score_fn):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
     return torch.sign(x_lift[:, 0, None])
 
+# returns a torch.FloatTensor size (N,)
 def random_hyperplane_projector(args, x_lift, example, score_fn):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
@@ -142,37 +144,35 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
 
-    # TODO XXX add line here that ensures that all outputs are +- 1 and never 0
+    num_zeros = (x_proj == 0).count_nonzero()
+    if num_zeros > 0:
+        print("WARNING: detected zeros in hyperplane rounding output")
 
     return out
 
-def max_cut_greedy(args, x_proj, example, score_fn):
-    pass # TODO
+def get_greedy_fn(args):
+    if args.problem_type == 'max_cut':
+        return max_cut_greedy
+    elif args.problem_type == 'vertex_cover':
+        return vertex_cover_greedy
+    elif args.problem_type == 'max_clique':
+        return max_clique_greedy
 
-def vertex_cover_greedy(A, warm_start=None, iterations=100, weights=None):
-    # from /maxcut-80/vertex_cover/vc_sdp.ipynb::vc_greedy
-    #start = np.random.bernoulli(N)
-    N , _ = A.shape
-    if weights is None:
-        weights = np.ones(N)
-        
-    if warm_start is None:
-        start = np.ones(N)
-    else: 
-        start = warm_start
-    for it in range(iterations):
-        for i in range(N):
-            all_ones = True
-            for j in range(N):
-                if A[i,j] == 0:
-                    continue
-                if A[i,j] == 1 and start[j] == 0:
-                    all_ones = False
-            if all_ones and weights[i] > 0:
-                start[i] = 0
-            if not all_ones and start[i] == 0:
-                start[i] = 1
-    return np.inner(weights,start)
+# expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
+# XXX doesn't greedy (too slow): just ensures it's sane
+def max_cut_greedy(args, x_proj, example, score_fn):
+    if isinstance(x_proj, np.ndarray):
+        x_proj = torch.FloatTensor(x_proj)
+    torch.where(x_proj == 0, x_proj, 1)
+    return x_proj
+
+# expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
+# XXX doesn't greedy (too slow): just ensures it's sane
+def vertex_cover_greedy(args, x_proj, example, score_fn):
+    if isinstance(x_proj, np.ndarray):
+        x_proj = torch.FloatTensor(x_proj)
+    torch.where(x_proj == 0, x_proj, 1)
+    return x_proj
 
 def max_cut_gurobi(args, example):
     # Create a new model
