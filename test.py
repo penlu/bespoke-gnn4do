@@ -6,16 +6,17 @@ from model.parsing import parse_test_args
 import json
 import os
 from data.loader import construct_loaders
-from model.training import predict
+from model.training import validate
 from model.models import construct_model
 from model.losses import get_loss_fn
 from model.saving import load_model
 import pickle
 from datetime import datetime
+import numpy as np
 
 '''
-python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/_2023-08-19_09:22:09" \
-    --model_file=model_ep0.pt
+python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230924_hparam/paramhash:0a0656a369a5b8e4a4be27e0d04fb3b8c161e7b630caf99b8eaeedcddd6a2b18" \
+    --model_file=best_model.pt --problem_type=vertex_cover --dataset=ENZYMES
 '''
 
 if __name__ == '__main__':
@@ -27,14 +28,15 @@ if __name__ == '__main__':
     criterion = get_loss_fn(args)
 
     # load model
-    load_model(model, os.path.join(args.model_folder, args.model_file))
+    model = load_model(model, os.path.join(args.model_folder, args.model_file))
+    model.to(args.device)
 
     # call test model
-    predictions = predict(model, test_loader, args)
+    predictions = validate(args, model, test_loader) #predict(model, test_loader, args)
+    print(predictions)
 
     # TODO: fix output file?
-    pickle.dump(model, open(os.path.join(args.model_folder, 
-                                        f'test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.pkl'), "wb"))
+    np.save(os.path.join(args.model_folder, f'test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.np'), np.array(predictions))
 
     print("finished predicting!")
     
