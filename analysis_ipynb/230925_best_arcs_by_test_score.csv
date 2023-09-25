@@ -1,0 +1,10 @@
+,model_type,num_layers,repeat_lift_layers,num_layers_project,rank,vc_penalty,dataset,infinite,positional_encoding,pe_dimension,max_valid_score,max_valid_epoch,scores
+65,LiftMP,12,,4,16,1.0,BarabasiAlbert,True,,8,-56.605,7,-56.602
+429,LiftMP,12,,4,16,1.0,COLLAB,False,laplacian_eigenvector,8,-65.494,27,-67.516
+420,LiftMP,8,,4,16,1.0,ENZYMES,False,laplacian_eigenvector,8,-18.916666666666668,25,-20.016666666666666
+128,LiftMP,8,,4,16,1.0,ErdosRenyi,True,,8,-85.539,8,-85.542
+375,LiftMP,8,,4,8,1.0,IMDB-BINARY,False,laplacian_eigenvector,4,-15.42,6,-16.76
+153,GAT,16,,4,4,1.0,MUTAG,False,laplacian_eigenvector,2,-8.736842105263158,5,-7.7368421052631575
+423,LiftMP,12,,4,16,1.0,PROTEINS,False,laplacian_eigenvector,8,-25.65765765765766,3,-25.410714285714285
+69,LiftMP,12,,4,16,1.0,PowerlawCluster,True,,8,-56.814,8,-56.805
+38,LiftMP,16,,4,32,1.0,WattsStrogatz,True,,8,-61.212,9,-61.261
