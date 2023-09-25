@@ -39,15 +39,18 @@ def add_dataset_args(parser: ArgumentParser):
     parser.add_argument('--dataset', type=str, default='ErdosRenyi',
                         choices=[
                             'ErdosRenyi',
-                            'ForcedRB',
                             'BarabasiAlbert',
                             'PowerlawCluster',
                             'WattsStrogatz',
+                            'ForcedRB',
                             'ENZYMES',
                             'PROTEINS',
                             'IMDB-BINARY',
                             'MUTAG',
                             'COLLAB',
+                            'REDDIT-MULTI-5K',
+                            'REDDIT-MULTI-12K',
+                            'REDDIT-BINARY',
                         ],
                         help='Dataset type to use')
 

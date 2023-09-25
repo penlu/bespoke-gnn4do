@@ -13,10 +13,10 @@ from data.transforms import AddLaplacianEigenvectorPE, ToComplement
 
 generated_datasets = [
   'ErdosRenyi',
-  'ForcedRB',
   'BarabasiAlbert',
   'PowerlawCluster',
   'WattsStrogatz',
+  'ForcedRB',
 ]
 
 TU_datasets = [
@@ -32,7 +32,10 @@ TU_datasets = [
 
 def construct_dataset(args):
     # precompute laplacian eigenvectors unconditionally
-    pre_transform = AddLaplacianEigenvectorPE(k=8, is_undirected=True)
+    if not args.infinite:
+        pre_transform = AddLaplacianEigenvectorPE(k=8, is_undirected=True)
+    else:
+        pre_transform = None
 
     transform = None
     if args.positional_encoding == 'laplacian_eigenvector':
@@ -108,8 +111,8 @@ def construct_loaders(args, mode=None):
         elif mode is None:
             # TODO make the validation set size controllable from args
             # TODO make the test_loader
-            val_loader = DataLoader(list(itertools.islice(dataset, 100)), batch_size=args.batch_size, shuffle=False)
-            test_loader = DataLoader(list(itertools.islice(dataset, 100)), batch_size=args.batch_size, shuffle=False)
+            val_loader = DataLoader(list(itertools.islice(dataset, 1000)), batch_size=args.batch_size, shuffle=False)
+            test_loader = DataLoader(list(itertools.islice(dataset, 1000)), batch_size=args.batch_size, shuffle=False)
             return train_loader, val_loader, test_loader
         else:
             raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")
