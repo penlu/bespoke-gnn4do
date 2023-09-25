@@ -21,9 +21,10 @@ echo "Job ID $SLURM_JOB_ID"
 echo "model=$MODEL dataset=$DATASET penalty=$PENALTY r=$R lift_layers=$LIFT_LAYERS"
 
 python -u train.py \
-    --stepwise=True --steps=100000 \
+    --stepwise=True --steps=10000 \
     --valid_freq=1000 --dropout=0 \
     --prefix=230924_hparam \
-    --model_type=$MODEL --dataset=$DATASET --parallel=20 --infinite \
+    --model_type=$MODEL --dataset=$DATASET --parallel=20 --infinite=True \
     --num_layers=$LIFT_LAYERS --rank=$R \
-    --vc_penalty=$PENALTY --problem_type=vertex_cover
+    --vc_penalty=$PENALTY --problem_type=vertex_cover \
+    --batch_size=16
