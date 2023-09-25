@@ -14,13 +14,13 @@ from data.loader import RandomGraphDataset
 
 def load_datasets():
     datasets = {}
-    print('loading RANDOM')
-    datasets['RANDOM'] = RandomGraphDataset(
-      root='../datasets/random',
-      num_graphs=1000,
-      num_nodes_per_graph=100,
-      edge_probability=0.15,
-    )
+    #print('loading RANDOM')
+    #datasets['RANDOM'] = RandomGraphDataset(
+    #  root='../datasets/random',
+    #  num_graphs=1000,
+    #  num_nodes_per_graph=100,
+    #  edge_probability=0.15,
+    #)
     for dataset in ['PROTEINS', 'ENZYMES', 'COLLAB', 'IMDB-BINARY', 'MUTAG']:
         print(f'loading {dataset}')
         loader = TUDataset(root=f'../datasets', name=dataset)
