@@ -27,6 +27,16 @@ if __name__ == '__main__':
 
     # get data
     dataset = construct_dataset(args)
+    if isinstance(dataset, IterableDataset):
+        val_set = list(itertools.islice(dataset, 1000))
+        test_set = list(itertools.islice(dataset, 1000))
+    else:
+        train_size = int(0.8 * len(dataset))
+        val_size = (len(dataset) - train_size)//2
+        test_size = len(dataset) - train_size - val_size
+
+        generator = torch.Generator().manual_seed(args.split_seed)
+        train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 
     lift_fns = {}
     if args.problem_type == 'max_cut':
@@ -54,7 +64,7 @@ if __name__ == '__main__':
     }
 
     results = []
-    for (i, example) in enumerate(dataset):
+    for (i, example) in enumerate(test_set):
         if args.start_index is not None and i < args.start_index:
             continue
 
