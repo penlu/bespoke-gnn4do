@@ -71,7 +71,7 @@ def add_dataset_args(parser: ArgumentParser):
                         help='m parameter of generated dataset (meaning varies)')
     parser.add_argument('--gen_k', type=int, default=4,
                         help='k parameter of generated dataset (meaning varies)')
-    parser.add_argument('--gen_p', type=float, default=0.25,
+    parser.add_argument('--gen_p', type=float, default=None,
                         help='p parameter of generated dataset (meaning varies)')
 
     # Arguments for ForcedRB graphs
