@@ -12,6 +12,7 @@ from model.training import train, validate
 if __name__ == '__main__':
     # parse args
     args = parse_train_args()
+    print(args)
     torch.manual_seed(args.seed)
     os.makedirs(args.log_dir, exist_ok=True)
 

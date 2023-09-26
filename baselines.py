@@ -20,6 +20,7 @@ from utils.graph_utils import complement_graph
 if __name__ == '__main__':
     # parse args
     args = parse_baseline_args()
+    print(args)
     torch.manual_seed(args.seed)
     os.makedirs(args.log_dir, exist_ok=True)
 
