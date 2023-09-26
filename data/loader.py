@@ -46,12 +46,8 @@ def construct_dataset(args):
         #transform = AddRandomWalkPE(walk_length=args.pe_dimension)
         # XXX we implement in featurize_batch in model/training.py
         if args.pe_dimension == 16:
-            if args.dataset in ['COLLAB', 'REDDIT-MULTI-5K', 'REDDIT-MULTI-12K', 'REDDIT-BINARY']:
-                print("skipping slow, large runs with 16-dimensional RWPE!")
-                exit(0)
-            if args.infinite and max(args.gen_n[0]) >= 500:
-                print("skipping slow, large runs with 16-dimensional RWPE!")
-                exit(0)
+            print("skipping slow, large runs with 16-dimensional RWPE!")
+            exit(0)
     elif args.positional_encoding is not None:
         raise ValueError(f"Invalid positional encoding passed into construct_dataset: {args.positional_encoding}")
 
