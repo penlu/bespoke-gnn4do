@@ -1,9 +1,7 @@
 #!/bin/bash
 #SBATCH -o 230925_gurobi_VC.%j.out
 #SBATCH --job-name="230925_gurobi_VC"
-#SBATCH -N 1
-#SBATCH -c 20
-#SBATCH --gres=gpu:volta:1
+#SBATCH -c 48
 #SBATCH --time=72:00:00          # total run time limit (HH:MM:SS)
 
 # Loading the required module
