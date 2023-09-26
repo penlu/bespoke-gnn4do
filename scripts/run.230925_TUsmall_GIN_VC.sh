@@ -39,4 +39,5 @@ for MODEL in 'GIN' ; do
               --batch_size=16 --positional_encoding=random_walk --pe_dimension=16
         done
     done
-done | parallel --ungroup -j2 'export CUDA_VISIBLE_DEVICES=$(({%} - 1)); python -u train.py {}'
+done | parallel --ungroup -j2 'export CUDA_VISIBLE_DEVICES=$(({%} - 1)); eval python -u train.py {}'
+#'export CUDA_VISIBLE_DEVICES=$(({%} - 1)); python -u train.py {}'
