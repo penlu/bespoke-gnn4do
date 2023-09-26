@@ -11,7 +11,6 @@ from torch_geometric.utils import (
     get_laplacian,
     get_self_loop_attr,
     scatter,
-    to_edge_index,
     to_dense_adj,
     to_torch_csr_tensor,
 )
