@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import IterableDataset, random_split
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset, PPI
-from torch_geometric.transforms import AddRandomWalkPE, Compose
+from torch_geometric.transforms import AddRandomWalkPE, Compose, ToDevice
 
 from data.generated import construct_generator, GeneratedDataset, GeneratedIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
@@ -43,7 +43,8 @@ def construct_dataset(args):
         assert args.pe_dimension <= 8 # for now, this is our maximum
     elif args.positional_encoding == 'random_walk':
         assert args.pe_dimension < args.rank
-        transform = AddRandomWalkPE(walk_length=args.pe_dimension)
+        #transform = AddRandomWalkPE(walk_length=args.pe_dimension)
+        # XXX we implement in featurize_batch in model/training.py
     elif args.positional_encoding is not None:
         raise ValueError(f"Invalid positional encoding passed into construct_dataset: {args.positional_encoding}")
 

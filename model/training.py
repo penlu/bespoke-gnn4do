@@ -9,6 +9,8 @@ from model.saving import save_model
 from model.losses import get_loss_fn, get_score_fn
 from utils.baselines import random_hyperplane_projector, get_greedy_fn
 
+from torch_geometric.transforms import AddRandomWalkPE
+
 def featurize_batch(args, batch):
     N = batch.num_nodes
     num_edges = batch.edge_index.shape[1]
@@ -25,6 +27,8 @@ def featurize_batch(args, batch):
         pe *= sign
         x_in = torch.cat((x_in, pe), 1)
     elif args.positional_encoding == 'random_walk':
+        # XXX add the random walk PE here
+        batch = AddRandomWalkPE(walk_length=args.pe_dimension)(batch.to(args.device))
         x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
         x_in = F.normalize(x_in, dim=1)
         pe = batch.random_walk_pe.to(args.device)
