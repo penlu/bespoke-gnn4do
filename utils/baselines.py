@@ -133,14 +133,20 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     A = to_dense_adj(edge_index)[0]
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
-    outputs = []
     n_hyperplanes = 1000 # TODO make this modifiable in args
-
-    hyper = torch.randn((n_hyperplanes, x_lift.shape[1]), device=x_lift.device)
-    hyper = F.normalize(hyper)
-    x_proj = torch.matmul(hyper, x_lift.t())
-    x_int = torch.sign(x_proj)[:, :, None]
-    scores = torch.vmap(lambda x: score_fn(args, x, example))(x_int)
+    n_groups = 10 # we do it in groups to reduce memory consumption
+    x_int = []
+    scores = []
+    for i in range(n_groups):
+        hyper = torch.randn((n_hyperplanes // n_groups, x_lift.shape[1]), device=x_lift.device)
+        hyper = F.normalize(hyper)
+        x_proj = torch.matmul(hyper, x_lift.t())
+        group_x_int = torch.sign(x_proj)[:, :, None]
+        group_scores = torch.vmap(lambda x: score_fn(args, x, example))(group_x_int)
+        x_int.append(group_x_int)
+        scores.append(group_scores)
+    x_int = torch.cat(x_int)
+    scores = torch.cat(scores)
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
 

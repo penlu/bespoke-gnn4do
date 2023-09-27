@@ -5,7 +5,7 @@ import time
 
 import torch
 import torch.nn.functional as F
-from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_tensor
+from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_tensor, to_torch_coo_tensor
 from functools import partial
 
 def get_loss_fn(args):
@@ -40,28 +40,39 @@ def vertex_cover_loss(X, edge_index, penalty=2):
     x : the output after application of the nn
     '''
     N = X.shape[0]
-    #A = to_torch_csr_tensor(edge_index, size=N)
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
+    #if torch.is_grad_enabled():
+    #    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
+    #else:
+    #    A = to_torch_coo_tensor(edge_index, size=N)
+
     # TODO: fix weights
     weights = torch.ones(N, device=X.device)
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
-
     linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
 
     # now calculate penalty for uncovered edges
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-
-    x_i = X[:, 0].view(-1, 1) # (N, 1)
-    x_j = torch.transpose(x_i, 0, 1) # (1, N)
-
     # phi is matrix of dimension N by N for error per edge
     # phi_ij = 1 - <x_i + x_j,e_1> + <x_i,x_j> for (i,j) \in Edges
-    phi = A - A * (x_i + x_j) + A * XX
-    phi_square = phi * phi
+    # phi_ij = <x_i - e1, x_j - e1> for (i, j) \in Edges
+    e1 = torch.zeros_like(X) # (num_edges, hidden)
+    e1[:, 0] = 1
+    Xm = X - e1
+    XX = torch.matmul(Xm, torch.transpose(Xm, 0, 1))
+    phi_square = A * (XX * XX)
+
+    # XXX the old calculation
+    #XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    #x_i = X[:, 0].view(-1, 1) # (N, 1)
+    #x_j = torch.transpose(x_i, 0, 1) # (1, N)
+    #phi = A - A * (x_i + x_j) + A * XX
+    #phi_square = phi * phi
+    #print("difference:", torch.linalg.matrix_norm(phi_square - phi * phi))
+
     # division by 2 because phi_square is symmetric and overcounts by 2
-    # divison by 2 again because constant penalty/2 * phi^2
+    # division by 2 again because constant penalty/2 * phi^2
     augment = penalty * torch.sum(phi_square) / 4.
     # objective is augmented lagrangian
     obj = linear + augment
