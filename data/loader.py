@@ -32,8 +32,14 @@ TU_datasets = [
 
 def construct_dataset(args):
     # precompute laplacian eigenvectors unconditionally
+    pre_transforms = []
     if not args.infinite and args.dataset in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
-        pre_transform = AddLaplacianEigenvectorPE(k=8, is_undirected=True)
+        pre_transforms.append(AddLaplacianEigenvectorPE(k=8, is_undirected=True))
+    elif not args.infinite:
+        pre_transforms.append(AddRandomWalkPE(walk_length=8))
+
+    if len(pre_transforms) > 0:
+        pre_transform = Compose(pre_transforms)
     else:
         pre_transform = None
 
