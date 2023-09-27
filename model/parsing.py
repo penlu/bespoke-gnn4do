@@ -143,9 +143,8 @@ def add_train_args(parser: ArgumentParser):
     parser.add_argument('--epochs', type=int, default=100,
                         help='Training epoch count')
 
-    # TODO need some params for how often to run validation, what validation to run, how often to save
-    parser.add_argument('--valid_fraction', type=float, default=0.2,
-                        help='Fraction of data to set aside for validation. XXX currently not used')
+    parser.add_argument('--train_fraction', type=float, default=0.8,
+                        help='Fraction of data to retain for training. Remainder goes to validation/testing.')
 
 def hash_dict(d):
     # Convert the dictionary to a sorted tuple of key-value pairs
