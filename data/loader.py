@@ -138,6 +138,8 @@ def construct_loaders(args, mode=None):
         val_size = (len(dataset) - train_size)//2
         test_size = len(dataset) - train_size - val_size
 
+        print(f"train/val/test split: {train_size}/{val_size}/{test_size}")
+
         generator = torch.Generator().manual_seed(args.split_seed)
         train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 
