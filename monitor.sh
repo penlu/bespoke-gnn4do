@@ -11,7 +11,7 @@ while true ; do
     cat $STATPATH | grep myau | wc -l
     cat $STATPATH | grep RUNNI
     ls -lart | tail -n 20
-    for i in $(cat $STATPATH | cut -d " " -f 2) ; do
-        tail -n 1 *$i.out
+    for i in $(cat $STATPATH | grep RUNNI | cut -d " " -f 2) ; do
+        echo $i $(tail -n 1 *$i.out)
     done
 done
