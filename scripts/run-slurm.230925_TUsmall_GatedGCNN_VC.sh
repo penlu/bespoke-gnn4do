@@ -18,22 +18,14 @@ for MODEL in 'GatedGCNN' ; do
                   --vc_penalty=1 --problem_type=vertex_cover \
                   --batch_size=16 --pe_dimension=$((R/2))
             done
-            LLsub ./submit.sh -- \
+            LLsub ./submit2.sh -- \
               --stepwise=True --steps=100000 \
               --valid_freq=1000 --dropout=0 \
               --prefix=$PREFIX \
               --model_type=$MODEL --dataset=$DATASET \
               --num_layers=$LIFT_LAYERS --rank=32 \
               --vc_penalty=1 --problem_type=vertex_cover \
-              --batch_size=16 --positional_encoding=laplacian_eigenvector --pe_dimension=8
-            LLsub ./submit.sh -- \
-              --stepwise=True --steps=100000 \
-              --valid_freq=1000 --dropout=0 \
-              --prefix=$PREFIX \
-              --model_type=$MODEL --dataset=$DATASET \
-              --num_layers=$LIFT_LAYERS --rank=32 \
-              --vc_penalty=1 --problem_type=vertex_cover \
-              --batch_size=16 --positional_encoding=random_walk --pe_dimension=16
+              --batch_size=16 --pe_dimension=8
         done
     done
 done
