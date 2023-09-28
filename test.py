@@ -25,7 +25,7 @@ from model.training import featurize_batch
 import time
 
 
-def time_and_scores(args, model, val_loader, criterion=None):
+def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
     loss_fn = get_loss_fn(args)
     score_fn = get_score_fn(args)
 
@@ -66,6 +66,9 @@ def time_and_scores(args, model, val_loader, criterion=None):
                 score = score_fn(args, x_proj, example)
                 scores.append( float(score.cpu().detach().numpy()))
 
+                if stop_early:
+                    break
+
     return times, scores
 
 if __name__ == '__main__':
@@ -83,7 +86,7 @@ if __name__ == '__main__':
 
     # call test model
     #predictions = validate(args, model, test_loader)
-    predictions = time_and_scores(args, model, test_loader)
+    predictions = time_and_scores(args, model, test_loader, stop_early=True)
     predictions = time_and_scores(args, model, test_loader)
     print(predictions)
 
@@ -91,4 +94,3 @@ if __name__ == '__main__':
     np.save(os.path.join(args.model_folder, f'{args.prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.np'), np.array(predictions))
 
     print("finished predicting!")
-    
