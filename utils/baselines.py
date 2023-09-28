@@ -157,7 +157,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     return out
 
 # expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
-def generic_greedy(args, x_proj, example, score_fn, iterations=1000):
+def generic_greedy(args, x_proj, example, score_fn, batch_sz=64, iterations=1000):
     if isinstance(x_proj, np.ndarray):
         x_proj = torch.FloatTensor(x_proj)
 
@@ -175,8 +175,8 @@ def generic_greedy(args, x_proj, example, score_fn, iterations=1000):
 
         # get a score for each row and select the best version
         scores = []
-        for batch_idx in range(0, N, args.batch_size):
-            version_slice = versions[batch_idx : min(batch_idx + args.batch_size, N)]
+        for batch_idx in range(0, N, batch_sz):
+            version_slice = versions[batch_idx : min(batch_idx + batch_sz, N)]
             batch_scores = torch.vmap(lambda x: score_fn(args, x, example))(version_slice)
             scores.append(batch_scores)
         scores = torch.cat(scores)
