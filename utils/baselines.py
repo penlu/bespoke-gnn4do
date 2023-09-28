@@ -198,6 +198,8 @@ def max_cut_gurobi(args, example):
     # Create a new model
     m = gp.Model("maxcut")
     m.params.OutputFlag = 0
+    m.params.Threads = 8
+    m.setParam(GRB.Param.Threads, 8)
 
     # time limit in seconds, if applicable
     if args.gurobi_timeout:
@@ -238,6 +240,8 @@ def vertex_cover_gurobi(args, example):
     x_vars = {}
     m = gp.Model("mip1")
     m.params.OutputFlag=0
+    m.params.Threads = 8
+    m.setParam(GRB.Param.Threads, 8)
 
     if args.gurobi_timeout:
         m.params.TimeLimit = args.gurobi_timeout

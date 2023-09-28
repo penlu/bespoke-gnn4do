@@ -285,6 +285,9 @@ def parse_baseline_args() -> Namespace:
     parser.add_argument('--end_index', type=int, default=None,
                         help='End index in dataset, for partial runs (only run i < end_index)')
 
+    parser.add_argument('--train_fraction', type=float, default=0.8,
+                        help='Fraction of data to retain for training. Remainder goes to validation/testing.')
+
     # TODO argument to control list of baselines to run?
 
     args = parser.parse_args()
