@@ -225,8 +225,10 @@ def parse_test_args() -> Namespace:
                         help='folder to look in.')
     parser.add_argument('--model_file', type=str, default=None,
                         help='model file')
-    add_general_args(parser)
-    add_dataset_args(parser)
+    parser.add_argument('--test_prefix', type=str, default=None,
+                        help='test output filename prefix')
+    #add_general_args(parser)
+    #add_dataset_args(parser)
     args = parser.parse_args()
 
     # read params from model folder.
@@ -238,6 +240,7 @@ def parse_test_args() -> Namespace:
 
     # get relevant keys
     argkeys = vars(args).keys()
+    #print("argkeys are:", argkeys)
     for k, v in model_args.items():
         if k not in argkeys:
             setattr(args, k, v)

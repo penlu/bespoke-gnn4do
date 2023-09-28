@@ -17,7 +17,9 @@ import numpy as np
 
 '''
 python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230924_hparam/paramhash:0a0656a369a5b8e4a4be27e0d04fb3b8c161e7b630caf99b8eaeedcddd6a2b18" \
-    --model_file=best_model.pt --problem_type=vertex_cover --dataset=ENZYMES --prefix=time_and_score
+    --model_file=best_model.pt --test_prefix=time_and_score
+
+Will load the dataset and parameters from the params in the model folder.
 '''
 from model.losses import get_loss_fn, get_score_fn
 from utils.baselines import random_hyperplane_projector
@@ -91,6 +93,6 @@ if __name__ == '__main__':
     print(predictions)
 
     # TODO: fix output file?
-    np.save(os.path.join(args.model_folder, f'{args.prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))
+    np.save(os.path.join(args.model_folder, f'{args.test_prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))
 
     print("finished predicting!")
