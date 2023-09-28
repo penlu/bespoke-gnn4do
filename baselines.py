@@ -38,7 +38,7 @@ if __name__ == '__main__':
         val_set = list(itertools.islice(dataset, 1000))
         test_set = list(itertools.islice(dataset, 1000))
     else:
-        train_size = int(0.8 * len(dataset))
+        train_size = int(args.train_fraction * len(dataset))
         val_size = (len(dataset) - train_size)//2
         test_size = len(dataset) - train_size - val_size
 
