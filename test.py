@@ -88,7 +88,7 @@ if __name__ == '__main__':
     print(predictions)
 
     # TODO: fix output file?
-    np.save(os.path.join(args.model_folder, f'{args.prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.np'), np.array(predictions))
+    np.save(os.path.join(args.model_folder, f'{args.prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))
 
     print("finished predicting!")
     
