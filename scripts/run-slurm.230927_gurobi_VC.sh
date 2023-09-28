@@ -2,7 +2,7 @@
 
 set -e
 
-export PREFIX=230925_gurobi_VC
+export PREFIX=230927_gurobi_VC
 
 for TIMEOUT in '0.1' '0.5' '1' '2' '4' '8' ; do
     for DATASET in 'ErdosRenyi' 'BarabasiAlbert' 'PowerlawCluster' 'WattsStrogatz' ; do
