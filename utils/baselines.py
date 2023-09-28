@@ -157,13 +157,40 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     return out
 
 # expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
-def generic_greedy(args, x_proj, example, score_fn, iterations=100):
+def generic_greedy(args, x_proj, example, score_fn, iterations=1000):
     if isinstance(x_proj, np.ndarray):
         x_proj = torch.FloatTensor(x_proj)
 
+    N = x_proj.shape[0]
+
     # TODO make number of iterations adjustable from arguments
+    flip_matrix = torch.ones(N, N, device=args.device) - 2 * torch.diag(torch.ones(N, device=args.device))
+    current_score = score_fn(args, x_proj, example)
     for i in range(iterations):
-        pass
+        # spam out N versions
+        versions = x_proj.repeat(N, 1) # (N, N) where each row versions[i] is a copy of x_proj
+
+        # flip the elements on the diagonal, generating N new versions
+        versions = versions * flip_matrix
+
+        # get a score for each row and select the best version
+        scores = []
+        for batch_idx in range(0, N, args.batch_size):
+            version_slice = versions[batch_idx : min(batch_idx + args.batch_size, N)]
+            batch_scores = torch.vmap(lambda x: score_fn(args, x, example))(version_slice)
+            scores.append(batch_scores)
+        scores = torch.cat(scores)
+        best = torch.argmax(scores)
+        if best > current_score:
+            # set the new current x_proj
+            current_score = best
+            x_proj = versions[best, :]
+        else:
+            # no version was better
+            print(f"greedy terminated at {i} iterations")
+            break
+    else:
+        print("greedy did not terminate")
 
     return x_proj
 
