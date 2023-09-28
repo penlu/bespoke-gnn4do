@@ -156,28 +156,15 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
 
     return out
 
-def get_greedy_fn(args):
-    if args.problem_type == 'max_cut':
-        return max_cut_greedy
-    elif args.problem_type == 'vertex_cover':
-        return vertex_cover_greedy
-    elif args.problem_type == 'max_clique':
-        return max_clique_greedy
-
 # expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
-# XXX doesn't greedy (too slow): just ensures it's sane
-def max_cut_greedy(args, x_proj, example, score_fn):
+def generic_greedy(args, x_proj, example, score_fn, iterations=100):
     if isinstance(x_proj, np.ndarray):
         x_proj = torch.FloatTensor(x_proj)
-    torch.where(x_proj == 0, x_proj, 1)
-    return x_proj
 
-# expect a (N,) shaped x_proj, all +/- 1. will tolerate 0 entries
-# XXX doesn't greedy (too slow): just ensures it's sane
-def vertex_cover_greedy(args, x_proj, example, score_fn):
-    if isinstance(x_proj, np.ndarray):
-        x_proj = torch.FloatTensor(x_proj)
-    torch.where(x_proj == 0, x_proj, 1)
+    # TODO make number of iterations adjustable from arguments
+    for i in range(iterations):
+        pass
+
     return x_proj
 
 def max_cut_gurobi(args, example):
