@@ -23,7 +23,7 @@ if __name__ == '__main__':
     args = parse_test_args()
 
     # get data, model
-    test_loader = construct_loaders(args, mode="test")
+    _, _, test_loader = construct_loaders(args)
     model, _ = construct_model(args)
     criterion = get_loss_fn(args)
 
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     print(predictions)
 
     # TODO: fix output file?
-    np.save(os.path.join(args.model_folder, f'test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.np'), np.array(predictions))
+    np.save(os.path.join(args.model_folder, f'{args.prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.np'), np.array(predictions))
 
     print("finished predicting!")
     

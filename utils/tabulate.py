@@ -77,11 +77,14 @@ def load_baseline_outputs(path, prefix, method, indices=None):
                 for line in f:
                     res = json.loads(line)
                     # second condition is: only do this if the graph is in the validation set
+                    #print("A")
+                    #assert(indices == None or dataset not in indices or res['index'] in indices[dataset])
+                    #print("B")
                     if res['method'] == method and (indices == None or dataset not in indices or res['index'] in indices[dataset]):
                         outputs[dataset] = outputs.get(dataset, []) + [res['score']]
 
-        except:
-            print(f'something is wrong w/ {folder}')
+        except Exception as e:
+            print(f'{e} is wrong w/ {folder}')
             print(sys.exc_info())
 
     for dataset, scores in outputs.items():

@@ -1,0 +1,13 @@
+,Type,Nmin,Nmax,LiftMP,gurobi_2.0,gurobi_4.0,gurobi_8.0
+BarabasiAlbert_50.0,BarabasiAlbert,50.0,50.0,351.488,352.121,352.121,352.121
+BarabasiAlbert_100.0,BarabasiAlbert,100.0,100.0,717.049,719.93,719.995,720.218
+BarabasiAlbert_400.0,BarabasiAlbert,400.0,400.0,2198.109,2208.788,2213.004,2213.085
+ErdosRenyi_50.0,ErdosRenyi,50.0,50.0,528.998,530.124,530.173,530.193
+ErdosRenyi_100.0,ErdosRenyi,100.0,100.0,1995.0515,2002.8885,2002.9175,2002.9755
+ErdosRenyi_400.0,ErdosRenyi,400.0,400.0,16379.34,16493.979,16495.244,16495.495
+PowerlawCluster_50.0,PowerlawCluster,50.0,50.0,345.741,346.424,346.424,346.424
+PowerlawCluster_100.0,PowerlawCluster,100.0,100.0,709.3875,712.6255,712.7235,712.9465
+PowerlawCluster_400.0,PowerlawCluster,400.0,400.0,2159.896,2169.781,2173.816,2173.946
+WattsStrogatz_50.0,WattsStrogatz,50.0,50.0,198.285,198.745,198.745,198.745
+WattsStrogatz_100.0,WattsStrogatz,100.0,100.0,389.767,392.068,392.068,392.068
+WattsStrogatz_400.0,WattsStrogatz,400.0,400.0,1165.903,1178.008,1178.464,1179.808
