@@ -8,12 +8,15 @@ import traceback
 
 import torch
 from torch.utils.data import IterableDataset, random_split
+from torch_geometric.utils.convert import to_networkx
+
+from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_cover
 
 from data.loader import construct_dataset
 from model.losses import max_cut_score, vertex_cover_score, max_clique_score
 from model.parsing import parse_baseline_args
-from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_greedy, max_cut_gurobi, vertex_cover_gurobi
-from utils.baselines import vertex_cover_sdp, vertex_cover_bm, vertex_cover_greedy
+from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_gurobi, vertex_cover_gurobi
+from utils.baselines import generic_greedy
 from utils.baselines import e1_projector, random_hyperplane_projector
 from utils.graph_utils import complement_graph
 
@@ -47,17 +50,14 @@ if __name__ == '__main__':
         if args.sdp:
             lift_fns['sdp'] = max_cut_sdp
             #'bm': max_cut_bm,
-        greedy_fn = max_cut_greedy
         score_fn = max_cut_score
     elif args.problem_type == 'vertex_cover':
         if args.sdp:
             lift_fns['sdp'] = vertex_cover_sdp
-        greedy_fn = vertex_cover_greedy
         score_fn = vertex_cover_score
     elif args.problem_type == 'max_clique':
         if args.sdp:
             lift_fns['sdp'] = vertex_cover_sdp
-        greedy_fn = vertex_cover_greedy
         score_fn = max_clique_score
     else:
         raise ValueError(f"baselines got invalid problem_type {args.problem_type}")
@@ -157,6 +157,30 @@ if __name__ == '__main__':
                 'score': float(gurobi_score),
                 #'penalty': float(gurobi_penalty),
                 'x': x_gurobi.tolist(),
+            }
+            outfile.write(json.dumps(res) + '\n')
+            outfile.flush()
+            results.append(res)
+
+        # run greedy
+        if args.greedy:
+            G = to_networkx(example)
+            start_time = time.time()
+            if args.problem_type == 'max_cut':
+                greedy_score, _ = one_exchange(G)
+            elif args.problem_type == 'vertex_cover':
+                cover = min_weighted_vertex_cover(G)
+                greedy_score = -len(cover)
+            else:
+                raise ValueError(f"greedy baseline not implemented for problem {args.problem_type}")
+            greedy_time = time.time() - start_time
+
+            res = {
+                'index': i,
+                'method': 'greedy',
+                'type': 'solver',
+                'time': greedy_time,
+                'score': float(greedy_score),
             }
             outfile.write(json.dumps(res) + '\n')
             outfile.flush()
