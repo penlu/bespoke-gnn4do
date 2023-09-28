@@ -273,6 +273,8 @@ def parse_baseline_args() -> Namespace:
                         help='Run Gurobi')
     parser.add_argument('--gurobi_timeout', type=float, default=5,
                         help='Timeout for Gurobi if desired')
+    parser.add_argument('--greedy', type=bool, default=False,
+                        help='Run greedy')
 
     parser.add_argument('--start_index', type=int, default=None,
                         help='Start index in dataset, for partial runs (only run i >= start_index)')
