@@ -28,10 +28,11 @@ def featurize_batch(args, batch):
         x_in = torch.cat((x_in, pe), 1)
     elif args.positional_encoding == 'random_walk':
         # XXX add the random walk PE here
-        batch = AddRandomWalkPE(walk_length=args.pe_dimension)(batch.to(args.device))
+        if not hasattr(batch, 'random_walk_pe'):
+            batch = AddRandomWalkPE(walk_length=args.pe_dimension)(batch.to(args.device))
         x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
         x_in = F.normalize(x_in, dim=1)
-        pe = batch.random_walk_pe.to(args.device)
+        pe = batch.random_walk_pe.to(args.device)[:, :args.pe_dimension]
         x_in = torch.cat((x_in, pe), 1)
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")

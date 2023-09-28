@@ -32,8 +32,14 @@ TU_datasets = [
 
 def construct_dataset(args):
     # precompute laplacian eigenvectors unconditionally
+    pre_transforms = []
     if not args.infinite and args.dataset in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
-        pre_transform = AddLaplacianEigenvectorPE(k=8, is_undirected=True)
+        pre_transforms.append(AddLaplacianEigenvectorPE(k=8, is_undirected=True))
+    elif not args.infinite:
+        pre_transforms.append(AddRandomWalkPE(walk_length=8))
+
+    if len(pre_transforms) > 0:
+        pre_transform = Compose(pre_transforms)
     else:
         pre_transform = None
 
@@ -127,11 +133,12 @@ def construct_loaders(args, mode=None):
         test_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
         return test_loader
     elif mode is None:
-        # TODO make this depend on args for split size
         print("dataset size:", len(dataset))
-        train_size = int(0.8 * len(dataset))
+        train_size = int(args.train_fraction * len(dataset))
         val_size = (len(dataset) - train_size)//2
         test_size = len(dataset) - train_size - val_size
+
+        print(f"train/val/test split: {train_size}/{val_size}/{test_size}")
 
         generator = torch.Generator().manual_seed(args.split_seed)
         train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size], generator=generator)
