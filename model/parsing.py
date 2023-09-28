@@ -235,11 +235,15 @@ def parse_test_args() -> Namespace:
     # set device
     model_args[ "device"] =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
     # get relevant keys
     argkeys = vars(args).keys()
     for k, v in model_args.items():
         if k not in argkeys:
             setattr(args, k, v)
+
+    if hasattr(args, 'valid_fraction'):
+        setattr(args, 'train_fraction', 0.8)
 
     return args
 
