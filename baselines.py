@@ -164,7 +164,7 @@ if __name__ == '__main__':
 
         # run greedy
         if args.greedy:
-            G = to_networkx(example)
+            G = to_networkx(example, to_undirected=True)
             start_time = time.time()
             if args.problem_type == 'max_cut':
                 greedy_score, _ = one_exchange(G)
