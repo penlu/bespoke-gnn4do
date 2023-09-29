@@ -15,9 +15,9 @@ echo "Job ID $SLURM_JOB_ID"
 DIRNAME=$1
 echo $DIRNAME
 
-python -u test.py --model_folder=$DIRNAME --model_file=best_model.pt --test_prefix=revalidate_best
+python -u test.py --model_folder=$DIRNAME --model_file=best_model.pt --test_prefix=revalidate_best --use_val_set=True
 if [ -f $DIRNAME/model_step20000.pt ] ; then
-    python -u test.py --model_folder=$DIRNAME --model_file=model_step20000.pt --test_prefix=revalidate_last
+    python -u test.py --model_folder=$DIRNAME --model_file=model_step20000.pt --test_prefix=revalidate_last --use_val_set=True
 else
-    python -u test.py --model_folder=$DIRNAME --model_file=model_step100000.pt --test_prefix=revalidate_last
+    python -u test.py --model_folder=$DIRNAME --model_file=model_step100000.pt --test_prefix=revalidate_last --use_val_set=True
 fi
