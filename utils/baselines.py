@@ -130,7 +130,6 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     N = example.num_nodes
     edge_index = example.edge_index.to(x_lift.device)
     E = edge_index.shape[1]
-    A = to_dense_adj(edge_index)[0]
     A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     n_hyperplanes = 1000 # TODO make this modifiable in args
@@ -150,7 +149,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
     best = torch.argmax(scores)
     out = x_int[best, :, 0]
 
-    num_zeros = (x_proj == 0).count_nonzero()
+    num_zeros = (out == 0).count_nonzero()
     if num_zeros > 0:
         print("WARNING: detected zeros in hyperplane rounding output")
 
