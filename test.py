@@ -39,7 +39,6 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
     with torch.no_grad():
         for batch in val_loader:
             for example in batch.to_data_list():
-
                 start_time = time.time()
                 x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
                 x_out = model(
@@ -59,7 +58,7 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
                 times.append(end_time - start_time)
 
                 # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-                x_proj = torch.where(x_proj == 0, x_proj, 1)
+                x_proj = torch.where(x_proj == 0, 1, x_proj)
 
                 num_zeros = (x_proj == 0).count_nonzero()
                 assert num_zeros == 0
@@ -67,6 +66,7 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
                 # count the score
                 score = score_fn(args, x_proj, example)
                 scores.append( float(score.cpu().detach().numpy()))
+                total_count += 1
 
                 if stop_early:
                     break
@@ -90,7 +90,8 @@ if __name__ == '__main__':
     #predictions = validate(args, model, test_loader)
     predictions = time_and_scores(args, model, test_loader, stop_early=True)
     predictions = time_and_scores(args, model, test_loader)
-    print(predictions)
+    times, scores = predictions
+    print(f'average score: {sum(scores) / len(scores)}')
 
     # TODO: fix output file?
     np.save(os.path.join(args.model_folder, f'{args.test_prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))

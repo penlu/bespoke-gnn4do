@@ -70,7 +70,7 @@ def validate(args, model, val_loader, criterion=None):
                 x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
 
                 # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-                x_proj = torch.where(x_proj == 0, x_proj, 1)
+                x_proj = torch.where(x_proj == 0, 1, x_proj)
 
                 num_zeros = (x_proj == 0).count_nonzero()
                 assert num_zeros == 0
