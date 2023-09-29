@@ -1,0 +1,21 @@
+,Type,Nmin,Nmax,LiftMP
+BarabasiAlbert_50.0,BarabasiAlbert,50.0,100.0,-42.88 +/- nan
+BarabasiAlbert_100.0,BarabasiAlbert,100.0,200.0,1.00 +/- 0.01
+BarabasiAlbert_400.0,BarabasiAlbert,400.0,500.0,1.01 +/- 0.01
+ErdosRenyi_50.0,ErdosRenyi,50.0,100.0,1.01 +/- 0.02
+ErdosRenyi_100.0,ErdosRenyi,100.0,200.0,1.03 +/- 0.01
+ErdosRenyi_400.0,ErdosRenyi,400.0,500.0,1.01 +/- 0.01
+PowerlawCluster_50.0,PowerlawCluster,50.0,100.0,1.00 +/- 0.01
+PowerlawCluster_100.0,PowerlawCluster,100.0,200.0,1.00 +/- 0.01
+PowerlawCluster_400.0,PowerlawCluster,400.0,500.0,1.01 +/- 0.01
+WattsStrogatz_50.0,WattsStrogatz,50.0,100.0,1.01 +/- 0.02
+WattsStrogatz_100.0,WattsStrogatz,100.0,200.0,1.02 +/- 0.01
+WattsStrogatz_400.0,WattsStrogatz,400.0,500.0,1.02 +/- 0.01
+MUTAG,MUTAG,,,-7.79 +/- nan
+ENZYMES,ENZYMES,,,1.00 +/- 0.00
+PROTEINS,PROTEINS,,,1.01 +/- 0.02
+IMDB-BINARY,IMDB-BINARY,,,-16.78 +/- nan
+COLLAB,COLLAB,,,1.00 +/- 0.00
+REDDIT-BINARY,REDDIT-BINARY,,,1.00 +/- 0.01
+REDDIT-MULTI-12K,REDDIT-MULTI-12K,,,1.00 +/- 0.00
+REDDIT-MULTI-5K,REDDIT-MULTI-5K,,,1.00 +/- 0.01
