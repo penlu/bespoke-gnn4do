@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     # get data, model
     #_, _, test_loader = construct_loaders(args)
-    pickled_data = pickle.load(open('/home/bcjexu/maxcut-80/bespoke-gnn4do/graphs_and_results.pickle', 'rb'))
+    pickled_data = pickle.load(open('/home/penlu/code/bespoke-gnn4do/graphs_and_results.pickle', 'rb'))
     dataset_names = ['er', 'ba', 'hk', 'ws']
 
     model, _ = construct_model(args)
@@ -93,6 +93,7 @@ if __name__ == '__main__':
     for ds in dataset_names:
         #ds_keys = list(pickled_data[ds].keys())
         datapoints = [y[0] for y in pickled_data[ds].values()]
+        print(len(datapoints))
 
         test_loader = DataLoader(datapoints, batch_size=args.batch_size, shuffle=False)
 
