@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o 230928_retest.%j.out
-#SBATCH --job-name="230928_retest"
+#SBATCH -o 230928_revalidate.%j.out
+#SBATCH --job-name="230928_revalidate"
 #SBATCH -N 1
 #SBATCH -c 20
 #SBATCH --gres=gpu:volta:1
@@ -15,9 +15,9 @@ echo "Job ID $SLURM_JOB_ID"
 DIRNAME=$1
 echo $DIRNAME
 
-python -u test.py --model_folder=training_runs/$DIRNAME --model_file=best_model.pt --test_prefix=retest_best
-if [ -f training_runs/$DIRNAME/model_step20000.pt ] ; then
-    python -u test.py --model_folder=training_runs/$DIRNAME --model_file=model_step20000.pt --test_prefix=retest_last
+python -u test.py --model_folder=$DIRNAME --model_file=best_model.pt --test_prefix=revalidate_best
+if [ -f $DIRNAME/model_step20000.pt ] ; then
+    python -u test.py --model_folder=$DIRNAME --model_file=model_step20000.pt --test_prefix=revalidate_last
 else
-    python -u test.py --model_folder=training_runs/$DIRNAME --model_file=model_step100000.pt --test_prefix=retest_last
+    python -u test.py --model_folder=$DIRNAME --model_file=model_step100000.pt --test_prefix=revalidate_last
 fi
