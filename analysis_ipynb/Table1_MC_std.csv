@@ -1,21 +1,12 @@
-,Type,Nmin,Nmax,LiftMP
-BarabasiAlbert_50.0,BarabasiAlbert,50.0,100.0,1.00 +/- 0.00
-BarabasiAlbert_100.0,BarabasiAlbert,100.0,200.0,1.00 +/- 0.00
-BarabasiAlbert_400.0,BarabasiAlbert,400.0,500.0,2197.99 +/- nan
-ErdosRenyi_50.0,ErdosRenyi,50.0,100.0,528.95 +/- nan
-ErdosRenyi_100.0,ErdosRenyi,100.0,200.0,1.00 +/- 0.00
-ErdosRenyi_400.0,ErdosRenyi,400.0,500.0,0.99 +/- 0.00
-PowerlawCluster_50.0,PowerlawCluster,50.0,100.0,1.00 +/- 0.00
-PowerlawCluster_100.0,PowerlawCluster,100.0,200.0,1.00 +/- 0.00
-PowerlawCluster_400.0,PowerlawCluster,400.0,500.0,0.99 +/- 0.00
-WattsStrogatz_50.0,WattsStrogatz,50.0,100.0,1.00 +/- 0.00
-WattsStrogatz_100.0,WattsStrogatz,100.0,200.0,0.99 +/- 0.00
-WattsStrogatz_400.0,WattsStrogatz,400.0,500.0,0.99 +/- 0.00
-MUTAG,MUTAG,,,1.00 +/- 0.00
-ENZYMES,ENZYMES,,,81.37 +/- nan
-PROTEINS,PROTEINS,,,102.15 +/- nan
-IMDB-BINARY,IMDB-BINARY,,,97.47 +/- nan
-COLLAB,COLLAB,,,2622.41 +/- nan
-REDDIT-BINARY,REDDIT-BINARY,,,1.00 +/- 0.00
-REDDIT-MULTI-12K,REDDIT-MULTI-12K,,,1.00 +/- 0.00
-REDDIT-MULTI-5K,REDDIT-MULTI-5K,,,1.00 +/- 0.00
+dataset,gen_n,GAT,GCNN,GIN,GatedGCNN,LiftMP
+ErdosRenyi,50.0,0.992 +/- 0.005,0.944 +/- 0.021,0.940 +/- 0.015,0.994 +/- 0.005,0.998 +/- 0.002
+ErdosRenyi,100.0,0.988 +/- 0.004,0.943 +/- 0.019,0.944 +/- 0.010,0.988 +/- 0.004,0.996 +/- 0.002
+ErdosRenyi,400.0,0.989 +/- 0.002,0.951 +/- 0.006,0.959 +/- 0.003,0.982 +/- 0.002,0.993 +/- 0.001
+MUTAG,,0.994 +/- 0.016,0.972 +/- 0.033,0.974 +/- 0.053,1.000 +/- 0.000,1.000 +/- 0.000
+ENZYMES,,0.992 +/- 0.010,0.903 +/- 0.091,0.896 +/- 0.088,0.999 +/- 0.003,0.999 +/- 0.003
+PROTEINS,,0.993 +/- 0.010,0.888 +/- 0.088,0.927 +/- 0.046,0.997 +/- 0.005,1.000 +/- 0.002
+IMDB-BINARY,,0.834 +/- 0.111,0.764 +/- 0.145,0.829 +/- 0.115,0.997 +/- 0.008,1.000 +/- 0.001
+COLLAB,,0.990 +/- 0.011,0.814 +/- 0.160,0.899 +/- 0.131,0.922 +/- 0.090,0.999 +/- 0.002
+REDDIT-BINARY,,,,,,1.000 +/- 0.001
+REDDIT-MULTI-12K,,,,,,0.999 +/- 0.002
+REDDIT-MULTI-5K,,,,,,0.999 +/- 0.002
