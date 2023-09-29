@@ -131,7 +131,7 @@ def add_train_args(parser: ArgumentParser):
                         help='Batch size for training')
     parser.add_argument('--valid_freq', type=int, default=1000,
                         help='Run validation every N steps/epochs (0 to never run validation)')
-    parser.add_argument('--save_freq', type=int, default=0,
+    parser.add_argument('--save_freq', type=int, default=1000,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
     parser.add_argument('--vc_penalty', type=float, default=None,
                         help='Penalty for missed edges in vertex cover')
