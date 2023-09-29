@@ -78,7 +78,10 @@ if __name__ == '__main__':
     print(args)
 
     # get data, model
-    _, _, test_loader = construct_loaders(args)
+    if args.use_val_set:
+        _, test_loader, _ = construct_loaders(args)
+    else:
+        _, _, test_loader = construct_loaders(args)
     model, _ = construct_model(args)
     criterion = get_loss_fn(args)
 
