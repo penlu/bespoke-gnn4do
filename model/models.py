@@ -94,8 +94,9 @@ class MaxCutGradLayer(MessagePassing):
     def __init__(self):
         super().__init__(aggr='add')
 
-    def forward(self, x, edge_index, **kwargs):
-        edge_weight = kwargs['edge_weight']
+    def forward(self, x, batch):
+        edge_index = batch.edge_index
+        edge_weight = batch.edge_weight
         return self.propagate(edge_index, x=x, edge_weight=edge_weight)
 
     def message(self, x_j, edge_weight):
@@ -108,9 +109,10 @@ class VertexCoverGradLayer(MessagePassing):
     def __init__(self):
         super().__init__(aggr='add')
 
-    def forward(self, x, edge_index, **kwargs):
-        node_weight = kwargs['node_weight']
-        vc_penalty = kwargs['vc_penalty']
+    def forward(self, x, batch):
+        edge_index = batch.edge_index
+        node_weight = batch.node_weight
+        vc_penalty = batch.vc_penalty
         return self.propagate(edge_index, x=x, node_weight=node_weight, vc_penalty=vc_penalty)
 
     def message(self, x_i, x_j, node_weight, vc_penalty):
@@ -135,8 +137,8 @@ class LiftLayer(torch.nn.Module):
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
 
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         norm_grads = F.normalize(grads, dim=1)
         out = torch.cat((x, norm_grads), 1)
         out = self.lin(out)
@@ -157,10 +159,10 @@ class LiftNetwork(torch.nn.Module):
             repeat_lift_layers = [1 for _ in range(num_layers)]
         self.repeat_lift_layers = repeat_lift_layers
 
-    def forward(self, x, edge_index, **kwargs):
+    def forward(self, x, batch):
         for l, repeat_l in zip(self.layers, self.repeat_lift_layers):
             for _ in range(repeat_l):
-                x = l(x, edge_index, **kwargs)
+                x = l(x, batch)
         return x
 
 # Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
@@ -170,8 +172,8 @@ class ProjectLayer(torch.nn.Module):
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
 
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         out = torch.cat((x, grads), 1)
         out = self.lin(out)
         out = F.tanh(out)
@@ -184,9 +186,9 @@ class ProjectNetwork(torch.nn.Module):
         for i, layer in enumerate(self.layers):
             self.add_module(f"layer_{i}", layer)
 
-    def forward(self, x, edge_index, **kwargs):
+    def forward(self, x, batch):
         for l in self.layers:
-            x = l(x, edge_index, **kwargs)
+            x = l(x, batch)
         return x
 
 class LiftProjectNetwork(torch.nn.Module):
@@ -219,10 +221,10 @@ class LiftProjectNetwork(torch.nn.Module):
             self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift, repeat_lift_layers=repeat_lift_layers)
         self.project_net = ProjectNetwork(grad_layer, in_channels, num_layers=num_layers_project)
 
-    def forward(self, x, edge_index, edge_weight):
-        out = self.lift_net(x, edge_index, edge_weight)
+    def forward(self, x, batch):
+        out = self.lift_net(x, batch)
         # TODO randomly rotate here
-        out = self.project_net(out, edge_index, edge_weight)
+        out = self.project_net(out, batch)
         return out
 
 # graph isomorphism network
@@ -236,8 +238,8 @@ class GINLiftNetwork(torch.nn.Module):
             norm=args.norm,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -254,8 +256,8 @@ class GATLiftNetwork(torch.nn.Module):
             num_layers=args.num_layers,
             heads=args.heads)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -270,8 +272,8 @@ class GCNLiftNetwork(torch.nn.Module):
             norm=args.norm,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -284,8 +286,8 @@ class GatedGCNLiftNetwork(torch.nn.Module):
         self.net = GatedGraphConv(out_channels=args.hidden_channels,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -294,12 +296,14 @@ class LiftLayerv2(torch.nn.Module):
         super().__init__()
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         out = torch.cat((x, grads), 1)
         out = self.lin(out)
         out = F.normalize(out, dim=1)
         return out
+
 class ProjectNetwork_r1(torch.nn.Module):
     def __init__(self, grad_layer, in_channels, num_layers=6):
         super().__init__()
@@ -307,9 +311,10 @@ class ProjectNetwork_r1(torch.nn.Module):
         for i, layer in enumerate(self.layers):
             self.add_module(f"layer_{i}", layer)
         self.lin = Linear(in_channels, 1)
-    def forward(self, x, edge_index, **kwargs):
+
+    def forward(self, x, batch):
         for l in self.layers:
-            x = F.leaky_relu(l(x, edge_index, **kwargs)+x,0.01)
+            x = F.leaky_relu(l(x, batch)+x,0.01)
         x = F.normalize(x)
         return x
 
@@ -318,7 +323,8 @@ class LiftProjectNetwork_Nikos(torch.nn.Module):
         super().__init__()
         self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift)
         self.project_net = ProjectNetwork_r1(grad_layer, in_channels, num_layers=num_layers_project)
-    def forward(self, x, edge_index, **kwargs):
-        out = self.lift_net(x, edge_index, **kwargs)
-        outs = self.project_net(out, edge_index, **kwargs)
+
+    def forward(self, x, batch):
+        out = self.lift_net(x, batch)
+        outs = self.project_net(out, batch)
         return outs

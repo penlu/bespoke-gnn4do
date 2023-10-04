@@ -17,15 +17,15 @@ def get_loss_fn(args):
         return partial(max_clique_loss, penalty = args.vc_penalty)
 
 # X should have shape (N, r)
-def max_cut_loss(X, edge_index):
+def max_cut_loss(X, batch):
     # compute loss
-    A = to_torch_csr_tensor(edge_index, size=X.shape[0])
+    A = to_torch_csr_tensor(batch.edge_index, batch.edge_weight, size=X.shape[0])
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
     obj = torch.trace(torch.matmul(A, XX)) / 2.
 
     return obj
 
-def vertex_cover_loss(X, edge_index, penalty=2):
+def vertex_cover_loss(X, batch, penalty=2):
     # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
     #def get_obj_vc_new(graph_params, conv_vc, A, edge_index, interpolate=0.5, **vc_params):
     '''calculates the stanadard relaxed loss with weights.
@@ -40,18 +40,15 @@ def vertex_cover_loss(X, edge_index, penalty=2):
     x : the output after application of the nn
     '''
     N = X.shape[0]
-    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
+    A = to_dense_adj(batch.edge_index, max_num_nodes=N)[0]
     #if torch.is_grad_enabled():
     #    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
     #else:
     #    A = to_torch_coo_tensor(edge_index, size=N)
 
-    # TODO: fix weights
-    weights = torch.ones(N, device=X.device)
-
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
-    linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], weights) / 2.
+    linear = torch.inner(torch.ones(N).to(X.device) + X[:, 0], batch.node_weight) / 2.
 
     # now calculate penalty for uncovered edges
     # phi is matrix of dimension N by N for error per edge
@@ -80,8 +77,8 @@ def vertex_cover_loss(X, edge_index, penalty=2):
     return obj
 
 # we are receiving the _complement_ of the target graph
-def max_clique_loss(X, edge_index, penalty=2):
-    return vertex_cover_loss(X, edge_index, penalty=penalty)
+def max_clique_loss(X, batch, penalty=2):
+    return vertex_cover_loss(X, batch, penalty=penalty)
 
 def get_score_fn(args):
     if args.problem_type == 'max_cut':
@@ -98,13 +95,8 @@ def max_cut_score(args, X, example):
     if len(X.shape) == 1:
         X = X[:, None]
     N = example.num_nodes
-    edge_index = example.edge_index.to(X.device)
-    A = to_torch_csr_tensor(edge_index, size=N)
-    E = edge_index.shape[1]
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
-
-    return (E - obj) / 2.
+    E = example.edge_index.shape[1]
+    return (E - max_cut_loss(X, example)) / 2.
 
 def vertex_cover_score(args, X, example):
     # convert numpy array to torch tensor
@@ -112,10 +104,7 @@ def vertex_cover_score(args, X, example):
         X = torch.FloatTensor(X)
     if len(X.shape) == 1:
         X = X[:, None]
-    N = example.num_nodes
-    edge_index = example.edge_index.to(X.device)
-
-    return - vertex_cover_loss(X, edge_index)
+    return - vertex_cover_loss(X, example)
 
 # we are receiving the _complement_ of the target graph
 # the score is N - k where k is the vertex cover size
@@ -125,6 +114,4 @@ def max_clique_score(args, X, example):
     if len(X.shape) == 1:
         X = X[:, None]
     N = example.num_nodes
-    edge_index = example.edge_index.to(X.device)
-
-    return N - vertex_cover_loss(X, edge_index)
+    return N - vertex_cover_loss(X, example)

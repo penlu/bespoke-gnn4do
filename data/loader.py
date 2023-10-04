@@ -49,11 +49,12 @@ def construct_dataset(args):
         assert args.pe_dimension <= 8 # for now, this is our maximum
     elif args.positional_encoding == 'random_walk':
         assert args.pe_dimension < args.rank
-        #transform = AddRandomWalkPE(walk_length=args.pe_dimension)
-        # XXX we implement in featurize_batch in model/training.py
-        if args.pe_dimension == 16:
-            print("skipping slow, large runs with 16-dimensional RWPE!")
-            exit(0)
+        assert args.pe_dimension <= 8 # for now, this is our maximum
+
+        # previously we would here apply AddRandomWalkPE(walk_length=args.pe_dimension) as transform
+        # however, this inefficiently computes it on the CPU
+        # changing devices causes errors because CUDA cannot be reinitialized in parallel loaders
+        # instead we implement in featurize_batch in model/training.py
     elif args.positional_encoding is not None:
         raise ValueError(f"Invalid positional encoding passed into construct_dataset: {args.positional_encoding}")
 
@@ -147,7 +148,6 @@ def construct_loaders(args, mode=None):
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-        
         return train_loader, val_loader, test_loader
     else:
         raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")

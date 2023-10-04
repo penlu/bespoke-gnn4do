@@ -12,9 +12,12 @@ from utils.baselines import random_hyperplane_projector
 from torch_geometric.transforms import AddRandomWalkPE
 
 def featurize_batch(args, batch):
+    batch = batch.to(args.device)
+
     N = batch.num_nodes
     num_edges = batch.edge_index.shape[1]
 
+    # build x
     if args.positional_encoding is None or args.pe_dimension == 0:
         # generate random vector input
         x_in = torch.randn((N, args.rank), dtype=torch.float, device=args.device)
@@ -37,13 +40,16 @@ def featurize_batch(args, batch):
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
 
-    edge_index = batch.edge_index.to(args.device)
+    # attach some weights if they're not already present
+    if not hasattr(batch, 'edge_weight'):
+        batch.edge_weight = torch.ones(num_edges, device=args.device)
+    if not hasattr(batch, 'node_weight'):
+        batch.node_weight = torch.ones(N, device=args.device)
 
-    # TODO later, a more robust attribute system
-    edge_weight = torch.ones(num_edges, device=args.device)
-    node_weight = torch.ones(N, device=args.device)
+    # TODO handling multi-penalty situations
+    batch.vc_penalty = args.vc_penalty
 
-    return x_in, edge_index, edge_weight, node_weight
+    return x_in, batch
 
 # measure and return the validation loss
 def validate(args, model, val_loader, criterion=None):
@@ -56,15 +62,9 @@ def validate(args, model, val_loader, criterion=None):
     with torch.no_grad():
         for batch in val_loader:
             for example in batch.to_data_list():
-                x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
-                x_out = model(
-                  x=x_in,
-                  edge_index=edge_index,
-                  edge_weight=edge_weight,
-                  node_weight=node_weight,
-                  vc_penalty=args.vc_penalty
-                )
-                loss = loss_fn(x_out, edge_index)
+                x_in, example = featurize_batch(args, example)
+                x_out = model(x_in, example)
+                loss = loss_fn(x_out, example)
                 total_loss += loss.cpu().detach().numpy()
 
                 x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
@@ -111,16 +111,11 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
 
         for batch in train_loader:
             # run the model
-            x_in, edge_index, edge_weight, node_weight = featurize_batch(args, batch)
-            x_out = model(x=x_in,
-              edge_index=edge_index,
-              edge_weight=edge_weight,
-              node_weight=node_weight,
-              vc_penalty=args.vc_penalty
-            )
+            x_in, batch = featurize_batch(args, batch)
+            x_out = model(x_in, batch)
 
             # get objective
-            loss = criterion(x_out, edge_index)
+            loss = criterion(x_out, batch)
 
             # run gradient descent step
             optimizer.zero_grad()
@@ -221,6 +216,7 @@ def predict(model, loader, args):
     batches = []
     # TODO decide return signature and transform.
     for batch in loader:
+        assert False, "not adapted to new featurize_batch: proceed with caution!"
         x_in, edge_index, edge_weight = featurize_batch(args, batch)
         x_out = model(x_in, edge_index, edge_weight)
         batches.append((x_out, edge_index))

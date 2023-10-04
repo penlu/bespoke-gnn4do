@@ -40,6 +40,7 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
         for batch in val_loader:
             for example in batch.to_data_list():
                 start_time = time.time()
+                assert False, "not adapted to new featurize_batch: proceed with caution!"
                 x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
                 x_out = model(
                   x=x_in,
