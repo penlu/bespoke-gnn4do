@@ -42,21 +42,14 @@ def featurize_batch(args, batch):
 
     # attach some weights if they're not already present
     if not hasattr(batch, 'edge_weight') or batch.edge_weight is None:
-        print("adding edge_weight")
         batch.edge_weight = torch.ones(num_edges, device=args.device)
-    else:
-        print("already have edge_weight???", batch.edge_weight)
 
     if not hasattr(batch, 'node_weight') or batch.node_weight is None:
-        print("adding node_weight")
         batch.node_weight = torch.ones(N, device=args.device)
-    else:
-        print("already have node_weight???")
 
     # TODO handling multi-penalty situations
     batch.vc_penalty = args.vc_penalty
 
-    print("before returning from featurize_batch,", batch)
     return x_in, batch
 
 # measure and return the validation loss
@@ -120,7 +113,6 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
         for batch in train_loader:
             # run the model
             x_in, batch = featurize_batch(args, batch)
-            print("in training.py:train," , batch)
             x_out = model(x_in, batch)
 
             # get objective
@@ -134,7 +126,6 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             # calculate and store average loss for batch
             avg_loss = loss.cpu().detach().numpy() / batch.num_graphs
             train_losses.append(avg_loss)
-            #print(f"avg_loss={avg_loss:0.2f}")
 
             # increment epoch loss counters
             epoch_total_loss += loss.cpu().detach().numpy()
