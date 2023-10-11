@@ -8,6 +8,8 @@ import torch.nn.functional as F
 from torch_geometric.utils import dense_to_sparse, to_dense_adj, to_torch_csr_tensor, to_torch_coo_tensor
 from functools import partial
 
+# TODO this will get sophisticated when we introduce higher-degree polynomial problems
+# TODO handle constraints separately?
 def get_loss_fn(args):
     if args.problem_type == 'max_cut':
         return max_cut_loss

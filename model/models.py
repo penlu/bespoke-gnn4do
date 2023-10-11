@@ -17,6 +17,7 @@ from torch_geometric.nn.conv import GatedGraphConv
 from model.more_models import NegationGAT
 from model.saving import load_model
 from model.parsing import read_params_from_folder
+from model.losses import get_loss_fn
 
 def construct_grad_layer(args):
     if args.problem_type == 'max_cut':
@@ -77,6 +78,14 @@ def construct_model(args):
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
         )
+    elif args.model_type == 'AutogradMP':
+        model = LiftNetwork(
+            #grad_layer=AutogradLayer(loss_fn=get_loss_fn(args)),
+            grad_layer=AutogradLayer(loss_fn=get_loss_fn(args), comparison=construct_grad_layer(args)),
+            in_channels=args.rank,
+            num_layers=args.num_layers,
+            repeat_lift_layers=args.repeat_lift_layers,
+        )
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
@@ -131,6 +140,28 @@ class VertexCoverGradLayer(MessagePassing):
         grad = -(aggr_out + 0.5 * e1 * node_weight.view(-1, 1))
         return grad
 
+# use autograd on a given loss function to compute gradients
+class AutogradLayer(torch.nn.Module):
+    def __init__(self, loss_fn, comparison=None):
+        super().__init__()
+        self._loss_fn = loss_fn
+        self.comparison = comparison
+
+    def forward(self, x, batch):
+        # calculate the lift loss and take the gradient w.r.t. the input x
+        # the result is expected to be autodiffable, and training should be unaffected
+        print("in autogradlayer,", batch)
+        with torch.enable_grad():
+            x.requires_grad_(True)
+            loss = self._loss_fn(x, batch)
+            grad = torch.autograd.grad(loss, x, create_graph=True)[0]
+            if self.comparison is not None:
+                comparison_output = -self.comparison(x, batch)
+                #print(comparison_output)
+                #print(grad)
+                print("diff norm:", torch.norm(comparison_output - grad))
+            return grad
+
 class LiftLayer(torch.nn.Module):
     def __init__(self, grad_layer, in_channels):
         super().__init__()
@@ -138,6 +169,7 @@ class LiftLayer(torch.nn.Module):
         self.lin = Linear(2*in_channels, in_channels)
 
     def forward(self, x, batch):
+        print("in LiftLayer forward", batch)
         grads = self.grad_layer(x, batch)
         norm_grads = F.normalize(grads, dim=1)
         out = torch.cat((x, norm_grads), 1)
