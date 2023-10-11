@@ -10,6 +10,7 @@ from torch_geometric.transforms import AddRandomWalkPE, Compose, ToDevice
 
 from data.generated import construct_generator, GeneratedDataset, GeneratedIterableDataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
+from data.test_sets import construct_kamis_dataset, construct_gset_dataset
 
 generated_datasets = [
   'ErdosRenyi',
@@ -30,13 +31,29 @@ TU_datasets = [
   'REDDIT-BINARY',
 ]
 
+test_datasets = [
+  'kamis',
+  'gset',
+]
+
 def construct_dataset(args):
-    # precompute laplacian eigenvectors unconditionally
     pre_transforms = []
-    if not args.infinite and args.dataset in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
+
+    # precompute laplacian eigenvectors for particular datasets
+    if args.dataset in ['ENZYMES', 'PROTEINS', 'IMDB-BINARY', 'MUTAG', 'COLLAB']:
         pre_transforms.append(AddLaplacianEigenvectorPE(k=8, is_undirected=True))
-    elif not args.infinite:
+
+    # precompute random walk PEs for all noninfinite datasets
+    if not args.infinite:
         pre_transforms.append(AddRandomWalkPE(walk_length=8))
+
+    # we do max clique by running VC on graph complement
+    # XXX kinda grody!!!
+    if args.problem_type == 'max_clique':
+        pre_transforms.append(ToComplement())
+        data_root = 'datasets_complement'
+    else:
+        data_root = 'datasets'
 
     if len(pre_transforms) > 0:
         pre_transform = Compose(pre_transforms)
@@ -57,17 +74,6 @@ def construct_dataset(args):
         # instead we implement in featurize_batch in model/training.py
     elif args.positional_encoding is not None:
         raise ValueError(f"Invalid positional encoding passed into construct_dataset: {args.positional_encoding}")
-
-    # we do max clique by running VC on graph complement
-    # XXX kinda grody!!!
-    if args.problem_type == 'max_clique':
-        if pre_transform is not None:
-            pre_transform = Compose([ToComplement(), pre_transform])
-        else:
-            pre_transform = ToComplement()
-        data_root = 'datasets_complement'
-    else:
-        data_root = 'datasets'
 
     if args.dataset in generated_datasets:
         generator, name = construct_generator(args)
@@ -92,10 +98,19 @@ def construct_dataset(args):
                     pre_transform=pre_transform,
                     transform=transform)
     elif args.dataset == 'PPI':
-        # TODO they handle the split differently for this one. we're fetching the training split
+        # TODO they handle the split differently for this one. we're fetching the training split here
         dataset = PPI(root=f'{data_root}',
                       pre_transform=pre_transform,
                       transform=transform)
+    elif args.dataset == 'kamis':
+        # TODO add args for dataset names
+        dataset = construct_kamis_dataset(args,
+                    pre_transform=pre_transform,
+                    transform=transform)
+    elif args.dataset == 'gset':
+        dataset = construct_gset_dataset(args,
+                    pre_transform=pre_transform,
+                    transform=transform)
     else:
         raise ValueError(f"Invalid dataset passed into construct_dataset: {args.dataset}")
 

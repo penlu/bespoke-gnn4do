@@ -1,4 +1,4 @@
-
+# TODO XXX this is deprecated. fix the kamis loader and use that instead
 # loads model and runs it on data. 
 
 import torch
@@ -33,6 +33,7 @@ import time
 
 
 def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
+    # TODO XXX this should get merged in with the validation function and go elsewhere
     loss_fn = get_loss_fn(args)
     score_fn = get_score_fn(args)
 
