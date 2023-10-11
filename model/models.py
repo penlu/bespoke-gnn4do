@@ -136,8 +136,8 @@ class VertexCoverGradLayer(MessagePassing):
         # aggr_out is the sum of gradients from constraints coming from neighbors
         e1 = torch.zeros_like(aggr_out) # (num_edges, hidden)
         e1[:, 0] = 1
-        # add e1 for gradient of x_i and take negative for descent direction
-        grad = -(aggr_out + 0.5 * e1 * node_weight.view(-1, 1))
+        # add e1 for gradient of x_i
+        grad = aggr_out + 0.5 * e1 * node_weight.view(-1, 1)
         return grad
 
 # use autograd on a given loss function to compute gradients
@@ -156,9 +156,7 @@ class AutogradLayer(torch.nn.Module):
             loss = self._loss_fn(x, batch)
             grad = torch.autograd.grad(loss, x, create_graph=True)[0]
             if self.comparison is not None:
-                comparison_output = -self.comparison(x, batch)
-                #print(comparison_output)
-                #print(grad)
+                comparison_output = self.comparison(x, batch)
                 print("diff norm:", torch.norm(comparison_output - grad))
             return grad
 
