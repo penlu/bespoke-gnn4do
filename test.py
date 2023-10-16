@@ -8,7 +8,6 @@ import os
 from data.loader import construct_loaders
 from model.training import validate
 from model.models import construct_model
-from model.losses import get_loss_fn
 from model.saving import load_model
 import pickle
 from datetime import datetime
@@ -21,8 +20,8 @@ python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_ru
 
 Will load the dataset and parameters from the params in the model folder.
 '''
-from model.losses import get_loss_fn, get_score_fn
-from utils.baselines import random_hyperplane_projector
+from problem.losses import get_loss_fn, get_score_fn
+from problem.baselines import random_hyperplane_projector
 from model.training import featurize_batch
 import time
 

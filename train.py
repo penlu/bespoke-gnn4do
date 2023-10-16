@@ -4,7 +4,7 @@ import os
 import torch
 
 from data.loader import construct_loaders
-from model.losses import get_loss_fn
+from problem.losses import get_loss_fn
 from model.models import construct_model
 from model.parsing import parse_train_args
 from model.training import train, validate

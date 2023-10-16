@@ -13,11 +13,11 @@ from torch_geometric.utils.convert import to_networkx
 from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_cover
 
 from data.loader import construct_dataset
-from model.losses import max_cut_score, vertex_cover_score, max_clique_score
+from problem.losses import max_cut_score, vertex_cover_score, max_clique_score
 from model.parsing import parse_baseline_args
-from utils.baselines import max_cut_sdp, max_cut_bm, max_cut_gurobi, vertex_cover_gurobi
-from utils.baselines import generic_greedy
-from utils.baselines import e1_projector, random_hyperplane_projector
+from problem.baselines import max_cut_sdp, max_cut_bm, max_cut_gurobi, vertex_cover_gurobi
+from problem.baselines import generic_greedy
+from problem.baselines import e1_projector, random_hyperplane_projector
 from utils.graph_utils import complement_graph
 
 if __name__ == '__main__':

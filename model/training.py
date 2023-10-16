@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as F
 
 from model.saving import save_model
-from model.losses import get_loss_fn, get_score_fn
-from utils.baselines import random_hyperplane_projector
+from problem.losses import get_loss_fn, get_score_fn
+from problem.baselines import random_hyperplane_projector
 
 from torch_geometric.transforms import AddRandomWalkPE
 
