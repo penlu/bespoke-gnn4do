@@ -62,7 +62,11 @@ def validate(args, model, val_loader, problem):
             for example in batch.to_data_list():
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
-                loss = problem.objective(x_out, example)
+
+                objective = problem.objective(x_out, batch)
+                constraint = problem.constraint(x_out, batch)
+                loss = objective + args.penalty * constraint
+
                 total_loss += loss.cpu().detach().numpy()
 
                 x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
@@ -112,10 +116,10 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
             x_in, batch = featurize_batch(args, batch)
             x_out = model(x_in, batch)
 
-            # get objective
-            obj = problem.objective(x_out, batch)
-            constraint = args.penalty * problem.constraint(x_out, batch)
-            loss = obj + constraint
+            # get loss
+            objective = problem.objective(x_out, batch)
+            constraint = problem.constraint(x_out, batch)
+            loss = objective + args.penalty * constraint
 
             # run gradient descent step
             optimizer.zero_grad()

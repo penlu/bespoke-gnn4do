@@ -60,6 +60,7 @@ def vertex_cover_constraint(X, batch):
     return constraint
 
 # we are receiving the _complement_ of the target graph
+# TODO fix this
 def max_clique_loss(X, batch, penalty=2):
     return vertex_cover_loss(X, batch, penalty=penalty)
 

@@ -16,7 +16,7 @@ from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
 from model.saving import load_model
-from model.parsing import read_params_from_folder
+from utils.parsing import read_params_from_folder
 from problem.losses import get_loss_fn
 
 def construct_grad_layer(args):
