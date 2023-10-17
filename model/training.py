@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 from model.saving import save_model
-from problem.losses import get_loss_fn, get_score_fn
+from problem.losses import get_score_fn
 from problem.baselines import random_hyperplane_projector
 
 from torch_geometric.transforms import AddRandomWalkPE
@@ -53,10 +53,7 @@ def featurize_batch(args, batch):
     return x_in, batch
 
 # measure and return the validation loss
-def validate(args, model, val_loader, criterion=None):
-    loss_fn = get_loss_fn(args)
-    score_fn = get_score_fn(args)
-
+def validate(args, model, val_loader, problem):
     total_loss = 0.
     total_score = 0.
     total_count = 0
@@ -65,10 +62,10 @@ def validate(args, model, val_loader, criterion=None):
             for example in batch.to_data_list():
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
-                loss = loss_fn(x_out, example)
+                loss = problem.objective(x_out, example)
                 total_loss += loss.cpu().detach().numpy()
 
-                x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
 
                 # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
                 x_proj = torch.where(x_proj == 0, 1, x_proj)
@@ -77,14 +74,14 @@ def validate(args, model, val_loader, criterion=None):
                 assert num_zeros == 0
 
                 # count the score
-                score = score_fn(args, x_proj, example)
+                score = problem.score(args, x_proj, example)
                 total_score += score.cpu().detach().numpy()
 
                 total_count += 1
 
     return total_loss / total_count, total_score / total_count
 
-def train(args, model, train_loader, optimizer, criterion, val_loader=None, test_loader=None):
+def train(args, model, train_loader, optimizer, problem, val_loader=None, test_loader=None):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
@@ -116,7 +113,9 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             x_out = model(x_in, batch)
 
             # get objective
-            loss = criterion(x_out, batch)
+            obj = problem.objective(x_out, batch)
+            constraint = args.penalty * problem.constraint(x_out, batch)
+            loss = obj + constraint
 
             # run gradient descent step
             optimizer.zero_grad()
@@ -146,7 +145,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
-                    valid_loss, valid_score = validate(args, model, val_loader)
+                    valid_loss, valid_score = validate(args, model, val_loader, problem)
                     # save model if it's the current best
                     if len(valid_scores)==0 or valid_score > max(valid_scores):
                         save_model(model, f"{model_folder}/best_model.pt")
@@ -156,7 +155,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
                     
                     # test
                     if test_loader is not None:
-                        test_loss, test_score = validate(args, model, test_loader)
+                        test_loss, test_score = validate(args, model, test_loader, problem)
                         test_losses.append(test_loss)
                         test_scores.append(test_score)
                     else:
@@ -187,7 +186,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             # occasionally run validation
             if args.valid_freq != 0 and ep % args.valid_freq == 0:
                 valid_start_time = time.time()
-                valid_loss, valid_score = validate(args, model, val_loader)
+                valid_loss, valid_score = validate(args, model, val_loader, problem)
                 valid_losses.append(valid_loss)
                 valid_scores.append(valid_score)
                 valid_time = time.time() - valid_start_time

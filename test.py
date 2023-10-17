@@ -2,7 +2,7 @@
 # loads model and runs it on data. 
 
 import torch
-from model.parsing import parse_test_args
+from utils.parsing import parse_test_args
 import json
 import os
 from data.loader import construct_loaders

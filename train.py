@@ -4,9 +4,9 @@ import os
 import torch
 
 from data.loader import construct_loaders
-from problem.losses import get_loss_fn
+from problem.problems import get_problem
 from model.models import construct_model
-from model.parsing import parse_train_args
+from utils.parsing import parse_train_args
 from model.training import train, validate
 
 if __name__ == '__main__':
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # get data, model
     train_loader, val_loader, test_loader = construct_loaders(args)
     model, optimizer = construct_model(args)
-    criterion = get_loss_fn(args)
+    problem = get_problem(args)
 
     # train model
     train(args, model, train_loader, optimizer, criterion, val_loader=val_loader, test_loader=test_loader)
