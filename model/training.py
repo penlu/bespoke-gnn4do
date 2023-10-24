@@ -6,7 +6,6 @@ import torch
 import torch.nn.functional as F
 
 from model.saving import save_model
-from problem.losses import get_score_fn
 from problem.baselines import random_hyperplane_projector
 
 from torch_geometric.transforms import AddRandomWalkPE
@@ -48,7 +47,7 @@ def featurize_batch(args, batch):
         batch.node_weight = torch.ones(N, device=args.device)
 
     # TODO handling multi-penalty situations
-    batch.vc_penalty = args.vc_penalty
+    batch.penalty = args.penalty
 
     return x_in, batch
 
@@ -63,8 +62,8 @@ def validate(args, model, val_loader, problem):
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
 
-                objective = problem.objective(x_out, batch)
-                constraint = problem.constraint(x_out, batch)
+                objective = problem.objective(x_out, example)
+                constraint = problem.constraint(x_out, example)
                 loss = objective + args.penalty * constraint
 
                 total_loss += loss.cpu().detach().numpy()

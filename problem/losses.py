@@ -80,7 +80,7 @@ def vertex_cover_score(args, X, example):
         X = torch.FloatTensor(X)
     if len(X.shape) == 1:
         X = X[:, None]
-    return - (vertex_cover_obj(X, example) + vertex_cover_constraint(X, batch))
+    return - (vertex_cover_obj(X, example) + vertex_cover_constraint(X, example))
 
 # we are receiving the _complement_ of the target graph
 # the score is N - k where k is the vertex cover size

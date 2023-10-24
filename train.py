@@ -26,10 +26,10 @@ if __name__ == '__main__':
     problem = get_problem(args)
 
     # train model
-    train(args, model, train_loader, optimizer, criterion, val_loader=val_loader, test_loader=test_loader)
+    train(args, model, train_loader, optimizer, problem, val_loader=val_loader, test_loader=test_loader)
 
     # run final validation
-    valid_loss = validate(args, model, val_loader, criterion)
+    valid_loss = validate(args, model, val_loader, problem)
 
     # write "done" file
     with open(os.path.join(args.log_dir, 'done.txt'), 'w') as file:

@@ -1,4 +1,4 @@
-from problem.losses import max_cut_loss, vertex_cover_loss, max_clique_loss
+from problem.losses import max_cut_obj, vertex_cover_obj, vertex_cover_constraint
 from problem.losses import max_cut_score, vertex_cover_score, max_clique_score
 from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_cover
 from problem.baselines import max_cut_sdp, vertex_cover_sdp
@@ -17,32 +17,30 @@ def get_problem(args):
 # Bundle losses, constraints, and utilities for a constrained optimization problem
 class OptProblem():
     @staticmethod
-    @abstractmethod
+    def loss(X, batch):
+        raise NotImplementedError()
+
+    @staticmethod
     def objective(X, batch):
         raise NotImplementedError()
 
     @staticmethod
-    @abstractmethod
     def constraint(X, batch):
         raise NotImplementedError()
 
     @staticmethod
-    @abstractmethod
     def score(args, X, example):
         raise NotImplementedError()
 
     @staticmethod
-    @abstractmethod
     def greedy(G):
         raise NotImplementedError()
 
     @staticmethod
-    @abstractmethod
     def sdp(args, example):
         raise NotImplementedError()
 
     @staticmethod
-    @abstractmethod
     def gurobi(args, example):
         raise NotImplementedError()
 

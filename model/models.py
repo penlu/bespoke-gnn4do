@@ -17,22 +17,12 @@ from torch_geometric.nn.conv import GatedGraphConv
 from model.more_models import NegationGAT
 from model.saving import load_model
 from utils.parsing import read_params_from_folder
-from problem.losses import get_loss_fn
-
-def construct_grad_layer(args):
-    if args.problem_type == 'max_cut':
-        return MaxCutGradLayer()
-    elif args.problem_type == 'vertex_cover':
-        return VertexCoverGradLayer()
-    elif args.problem_type == 'max_clique':
-        return VertexCoverGradLayer() # we do clique by complement
-    else:
-        raise ValueError(f"construct_grad_layer got unsupported problem_type {problem_type}")
+from problem.problems import get_problem
 
 def construct_model(args):
     if args.model_type == 'LiftMP':
         model = LiftNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).objective),
           in_channels=args.rank,
           num_layers=args.num_layers,
           repeat_lift_layers=args.repeat_lift_layers,
@@ -78,13 +68,6 @@ def construct_model(args):
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
         )
-    elif args.model_type == 'AutogradMP':
-        model = LiftNetwork(
-            grad_layer=AutogradLayer(loss_fn=get_loss_fn(args)),
-            in_channels=args.rank,
-            num_layers=args.num_layers,
-            repeat_lift_layers=args.repeat_lift_layers,
-        )
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
@@ -96,48 +79,6 @@ def construct_model(args):
     opt = Adam(model.parameters(), args.lr)
 
     return model, opt
-
-# This network concatenates the neighborhood gradient to each vector in its input.
-class MaxCutGradLayer(MessagePassing):
-    def __init__(self):
-        super().__init__(aggr='add')
-
-    def forward(self, x, batch):
-        edge_index = batch.edge_index
-        edge_weight = batch.edge_weight
-        return self.propagate(edge_index, x=x, edge_weight=edge_weight)
-
-    def message(self, x_j, edge_weight):
-        return x_j * edge_weight[:, None]
-
-    def update(self, aggr_out, x, edge_weight):
-        return aggr_out
-
-class VertexCoverGradLayer(MessagePassing):
-    def __init__(self):
-        super().__init__(aggr='add')
-
-    def forward(self, x, batch):
-        edge_index = batch.edge_index
-        node_weight = batch.node_weight
-        vc_penalty = batch.vc_penalty
-        return self.propagate(edge_index, x=x, node_weight=node_weight, vc_penalty=vc_penalty)
-
-    def message(self, x_i, x_j, node_weight, vc_penalty):
-        e1 = torch.zeros_like(x_j) # (num_edges, hidden)
-        e1[:, 0] = 1
-        # take (e1 - x_i)[e] . (e1 - x_j)[e] for each row e
-        phi = torch.sum((e1 - x_i) * (e1 - x_j), dim=1)[:, None] # (num_edges, 1)
-        scaling = vc_penalty * phi
-        return (-e1 + x_j) * scaling # (num_edges, hidden)
-
-    def update(self, aggr_out, x, node_weight, vc_penalty):
-        # aggr_out is the sum of gradients from constraints coming from neighbors
-        e1 = torch.zeros_like(aggr_out) # (num_edges, hidden)
-        e1[:, 0] = 1
-        # add e1 for gradient of x_i
-        grad = aggr_out + 0.5 * e1 * node_weight.view(-1, 1)
-        return grad
 
 # use autograd on a given loss function to compute gradients
 class AutogradLayer(torch.nn.Module):
