@@ -22,7 +22,7 @@ from problem.problems import get_problem
 def construct_model(args):
     if args.model_type == 'LiftMP':
         model = LiftNetwork(
-          grad_layer=AutogradLayer(loss_fn=get_problem(args).objective),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers=args.num_layers,
           repeat_lift_layers=args.repeat_lift_layers,

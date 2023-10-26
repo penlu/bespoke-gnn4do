@@ -29,6 +29,10 @@ class OptProblem():
         raise NotImplementedError()
 
     @staticmethod
+    def loss(X, batch):
+        raise NotImplementedError()
+
+    @staticmethod
     def score(args, X, example):
         raise NotImplementedError()
 
@@ -52,6 +56,10 @@ class MaxCutProblem(OptProblem):
     @staticmethod
     def constraint(X, batch):
         return 0.
+
+    @staticmethod
+    def loss(X, batch):
+        return max_cut_obj(X, batch)
 
     @staticmethod
     def score(args, X, example):
@@ -78,6 +86,11 @@ class VertexCoverProblem(OptProblem):
     @staticmethod
     def constraint(X, batch):
         return vertex_cover_constraint(X, batch)
+
+    @staticmethod
+    def loss(X, batch):
+        return vertex_cover_obj(X, batch) + \
+            batch.penalty * vertex_cover_constraint(X, batch)
 
     @staticmethod
     def score(args, X, example):

@@ -46,7 +46,7 @@ def featurize_batch(args, batch):
     if not hasattr(batch, 'node_weight') or batch.node_weight is None:
         batch.node_weight = torch.ones(N, device=args.device)
 
-    # TODO handling multi-penalty situations
+    # TODO handling multi-penalty situations -- shouldn't be in featurize
     batch.penalty = args.penalty
 
     return x_in, batch
@@ -61,10 +61,7 @@ def validate(args, model, val_loader, problem):
             for example in batch.to_data_list():
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
-
-                objective = problem.objective(x_out, example)
-                constraint = problem.constraint(x_out, example)
-                loss = objective + args.penalty * constraint
+                loss = problem.loss(x_out, example)
 
                 total_loss += loss.cpu().detach().numpy()
 
@@ -116,9 +113,7 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
             x_out = model(x_in, batch)
 
             # get loss
-            objective = problem.objective(x_out, batch)
-            constraint = problem.constraint(x_out, batch)
-            loss = objective + args.penalty * constraint
+            loss = problem.loss(x_out, batch)
 
             # run gradient descent step
             optimizer.zero_grad()
