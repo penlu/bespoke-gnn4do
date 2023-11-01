@@ -233,8 +233,7 @@ def parse_test_args() -> Namespace:
     model_args = read_params_from_folder(args.model_folder)
 
     # set device
-    model_args[ "device"] =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    model_args["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # get relevant keys
     argkeys = vars(args).keys()
