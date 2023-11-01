@@ -1,0 +1,167 @@
+# Loading SAT problems
+import itertools
+import torch
+
+# turn a DIMACS input into a clause-list representation
+def dimacs_parser():
+    pass
+
+# generate clause-list representation of random 3-SAT problem
+def random_3sat_generator(seed, N=100, K=50):
+    # generate random clauses
+    clauses = torch.randint(0, N, (K, 3))
+
+    # put clauses in variable order
+    clauses, _ = torch.sort(clauses, dim=-1)
+
+    # generate random sign: -1 means corresponding var appears in clause inverted
+    signs = torch.bernoulli(torch.full((K, 3), 0.1)) * 2 - 1
+
+    return clauses, signs
+
+# constraints of the form <x_i, x_j> = <x_ij, e1>
+def make_undirected_constraint(total_vars, pair_to_index, i, j):
+    Ci = []; Cv = []
+    Ci.append([i+1, j+1]); Cv.append(1)
+    Ci.append([pair_to_index[(i, j)]+1, 0]); Cv.append(-1)
+    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    return C
+
+# constraints of the form <x_i, x_ij> = <x_j, e1>
+def make_directed_constraint(total_vars, pair_to_index, i, j):
+    a, b = sorted((i, j))
+    Ci = []; Cv = []
+    Ci.append([i+1, pair_to_index[(a, b)]+1]); Cv.append(1)
+    Ci.append([j+1, 0]); Cv.append(-1)
+    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    return C
+
+# constraints of the form <x_i, x_jk> = <x_ij, x_k>
+def make_triangle_constraint(total_vars, pair_to_index, i, j, k):
+    Ci = []; Cv = []
+    Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1)
+    Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(-1)
+    C1 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+
+    Ci = []; Cv = []
+    Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(1)
+    Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1)
+    C2 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+
+    Ci = []; Cv = []
+    Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1)
+    Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1)
+    C3 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+
+    return C1, C2, C3
+
+# constraints of the form <x_ij, x_jk> = <x_i, x_k>
+def make_quad_constraint(total_vars, pair_to_index, i, j, k):
+    a, b = sorted((i, j))
+    c, d = sorted((j, k))
+    e, f = sorted((i, k))
+
+    Ci = []; Cv = []
+    Ci.append([pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1]); Cv.append(1)
+    Ci.append([e+1, f+1]); Cv.append(-1)
+    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+
+    return C
+
+# turn SAT problem into A, C sparse tensors, then emplace in pytorch geometric Data object
+def compile_sat(clauses, signs, N, K):
+    # obtain the pair variable dictionary, assigning an index to each pair
+    pair_to_index = {}
+    total_vars = N
+    for f in range(K):
+        # go over each pair of vars in this clause
+        for v1, v2 in itertools.combinations(list(clauses[f]), 2):
+            i, j = tuple(sorted((int(v1), int(v2))))
+            print(i, j)
+            if (i, j) not in pair_to_index:
+                # assign new variable
+                pair_to_index[(i, j)] = total_vars
+                total_vars += 1
+
+    print(f"total vars: {total_vars}")
+    print(f"pair_to_index: {pair_to_index}")
+
+    # compile the SAT problem to A and C sparse tensors
+    As = [] # list of weight matrices
+    Cs = [] # list of constraint matrices
+    for f in range(K):
+        i = int(clauses[f, 0])
+        j = int(clauses[f, 1])
+        k = int(clauses[f, 2])
+        tau_i = signs[f, 0]
+        tau_j = signs[f, 1]
+        tau_k = signs[f, 2]
+        weight = 1.
+
+        # CONSTRUCT A TERMS FOR THIS CLAUSE
+        Ai = []
+        Av = []
+
+        # order 1 entries
+        Ai.append([i+1, 0]); Av.append(tau_i)
+        Ai.append([j+1, 0]); Av.append(tau_j)
+        Ai.append([k+1, 0]); Av.append(tau_k)
+
+        # order 2 entries
+        Ai.append([i+1, j+1]); Av.append(tau_i * tau_j)
+        Ai.append([i+1, k+1]); Av.append(tau_i * tau_k)
+        Ai.append([j+1, k+1]); Av.append(tau_j * tau_k)
+
+        # order 3 entries
+        Ai.append([pair_to_index[(i, j)]+1, k+1]); Av.append(tau_i * tau_j * tau_k / 3.)
+        Ai.append([pair_to_index[(i, k)]+1, j+1]); Av.append(tau_i * tau_j * tau_k / 3.)
+        Ai.append([pair_to_index[(j, k)]+1, i+1]); Av.append(tau_i * tau_j * tau_k / 3.)
+
+        # the constant term
+        Ai.append([0, 0]); Av.append(-8.)
+
+        A = torch.sparse_coo_tensor(indices=list(zip(*Ai)), values=Av, size=(total_vars+1, total_vars+1))
+        As.append(A * weight / 8.)
+
+        # ADD C TERMS FOR THIS CLAUSE
+        # undirected constraints
+        Cs.append(make_undirected_constraint(total_vars, pair_to_index, i, j))
+        Cs.append(make_undirected_constraint(total_vars, pair_to_index, j, k))
+        Cs.append(make_undirected_constraint(total_vars, pair_to_index, i, k))
+
+        # directed constraints
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, i, j))
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, j, i))
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, i, k))
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, k, i))
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, j, k))
+        Cs.append(make_directed_constraint(total_vars, pair_to_index, k, j))
+
+        # triangle constraints
+        Cs += make_triangle_constraint(total_vars, pair_to_index, i, j, k)
+
+        # quad constraints
+        Cs.append(make_quad_constraint(total_vars, pair_to_index, i, j, k))
+        Cs.append(make_quad_constraint(total_vars, pair_to_index, i, k, j))
+        Cs.append(make_quad_constraint(total_vars, pair_to_index, j, i, k))
+
+    print(As)
+    A = torch.sparse.sum(torch.stack(As), dim=-1) # XXX
+    C = torch.stack(Cs)
+
+    #batch.edge_list = alkdsjfkdjf
+    #batch.edge_weights = askdfj
+
+    return A, C
+
+def sat_objective(X, batch):
+    A = to_torch_csr_tensor(batch.edge_index, batch.edge_weight, size=X.shape[0])
+    X = torch.cat(e1, torch.cat(torch.zeros(N), X, dim=1), dim=0)
+    XX = torch.matmul(X, torch.transpose(X, 0, 1))
+    obj = torch.trace(torch.matmul(A, XX)) / 2.
+
+if __name__ == '__main__':
+    print("hello! I am data/sat.py and it is time to run some tests")
+    A, C = compile_sat(*random_3sat_generator(0, 10, 1), 10, 1)
+    print(A, C)
+    #count_sat_clauses(clauses, signs, assignment) == sat_objective(compile_sat(clauses, signs, ...), vectorize(assignment))

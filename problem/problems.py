@@ -109,3 +109,26 @@ class VertexCoverProblem(OptProblem):
     @staticmethod
     def gurobi(args, example):
         return vertex_cover_gurobi(args, example)
+
+class SATProblem(OptProblem):
+    @staticmethod
+    def objective(X, batch):
+        pass
+
+    def constraint(X, batch):
+        pass
+
+    def loss(X, batch):
+        pass
+
+    def score(args, X, example):
+        pass
+
+    def greedy(G):
+        pass
+
+    def sdp(args, example):
+        pass
+
+    def gurobi(args, example):
+        pass

@@ -9,6 +9,7 @@ from torch_geometric.utils.convert import from_networkx
 
 from data.forced_rb_dataset import forced_rb_generator
 
+# a generator is a function that takes a seed and produces an iterator
 def construct_generator(args):
     if args.dataset == 'ErdosRenyi':
         gen_p = 0.15 if args.gen_p == None else args.gen_p
