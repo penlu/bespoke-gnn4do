@@ -215,6 +215,7 @@ if __name__ == '__main__':
         X_ext[pair_to_index[(j, k)], 0] = X[j] * X[k]
     objective, penalty = sat_objective(X_ext, A, C, N, K)
     print(objective)
+    print(C.shape)
     print("should be zero:", penalty)
 
     #count_sat_clauses(clauses, signs, assignment) == sat_objective(compile_sat(clauses, signs, ...), vectorize(assignment))
