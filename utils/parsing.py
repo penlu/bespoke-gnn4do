@@ -26,7 +26,7 @@ def required_length(nmin, nmax):
 def add_general_args(parser: ArgumentParser):
     # General arguments
     parser.add_argument('--problem_type', type=str, default='max_cut',
-        choices=['max_cut', 'vertex_cover', 'max_clique'],
+        choices=['max_cut', 'vertex_cover', 'max_clique', 'sat'],
         help='What problem are we doing?',
     )
     parser.add_argument('--seed', type=str, default=0,
