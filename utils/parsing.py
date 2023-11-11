@@ -157,8 +157,11 @@ def hash_dict(d):
     return hash_value
 
 def check_args(args: Namespace):
-    if args.problem_type == 'sat' and args.dataset != 'random-sat':
-        raise ValueError(f'dataset = {args.dataset} not valid for problem_type = {args.problem_type}')
+    if args.problem_type == 'sat':
+        if args.dataset != 'random-sat':
+            raise ValueError(f'dataset = {args.dataset} not valid for problem_type = {args.problem_type}')
+        if args.batch_size != 1:
+            raise ValueError(f'batch_size != 1 not valid for problem_type = {args.problem_type}')
     return
 
 def modify_train_args(args: Namespace):
