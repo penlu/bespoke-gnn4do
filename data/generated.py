@@ -8,6 +8,7 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
 
 from data.forced_rb_dataset import forced_rb_generator
+from data.sat import random_3sat_generator
 
 # a generator is a function that takes a seed and produces an iterator
 def construct_generator(args):
@@ -29,6 +30,9 @@ def construct_generator(args):
     elif args.dataset == 'ForcedRB':
         generator = lambda seed: forced_rb_generator(seed, n=args.RB_n, k=args.RB_k)
         name = f'forced_rb_n{args.RB_n}_k{args.RB_k}'
+    elif args.dataset == 'random-sat':
+        gen_p = 0.5 if args.gen_p == None else args.gen_p
+        generator = lambda seed: random_3sat_generator(seed, N=args.gen_n, K=args.gen_k, p=gen_p)
     else:
         raise ValueError('Got a bad generated dataset: {args.dataset}')
 

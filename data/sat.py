@@ -1,21 +1,23 @@
 # Loading SAT problems
 import itertools
+import numpy as np
 import torch
+from torch_geometric.utils import to_edge_index
 
 # turn a DIMACS input into a clause-list representation
 def dimacs_parser():
     pass
 
 # generate clause-list representation of random 3-SAT problem
-def random_3sat_generator(seed, N=100, K=50):
+def random_3sat_clauses(random_state, N=100, K=50, p=0.5):
     # generate random clauses
-    clauses = torch.randint(0, N, (K, 3))
+    clauses = random_state.randint(0, N, (K, 3))
 
     # put clauses in variable order
-    clauses, _ = torch.sort(clauses, dim=-1)
+    clauses = np.sort(clauses, axis=-1)
 
     # generate random sign: -1 means corresponding var appears in clause inverted
-    signs = torch.bernoulli(torch.full((K, 3), 0.1)) * 2 - 1
+    signs = random_state.binomial(1, p, size=(K, 3)) * 2 - 1
 
     return clauses, signs
 
@@ -147,10 +149,30 @@ def compile_sat(clauses, signs, N, K):
     A = torch.sparse.sum(torch.stack(As), dim=0)
     C = torch.stack(Cs)
 
-    #batch.edge_list = alkdsjfkdjf
-    #batch.edge_weights = askdfj
-
     return total_vars, pair_to_index, A, C
+
+def random_3sat_generator(seed, N=100, K=400, p=0.5):
+    random_state = np.random.RandomState(seed)
+    while True:
+        # generate A and C for a random 3-SAT instance
+        clauses, signs = random_3sat_clauses(random_state, N, K, p)
+        total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
+
+        # represent these as a Data object
+        edge_list, edge_weight = to_edge_index(A)
+        decremented = edge_list - 1
+
+        negative_columns = (decremented < 0).any(dim=0)
+        keep_columns = ~negative_columns
+        edge_list = decremented[:, keep_columns]
+        edge_weight = edge_weight[keep_columns]
+
+        yield Data(
+            num_nodes=total_vars,
+            edge_list=edge_list,
+            edge_weight=edge_weight,
+            A=A, C=C, N=N, K=K,
+            pair_to_index=pair_to_index)
 
 def sat_objective(X, A, C, N, K):
     # expand X to include e1
@@ -181,12 +203,12 @@ def count_sat_clauses(X, clauses, signs):
 
 if __name__ == '__main__':
     print("hello! I am data/sat.py and it is time to run some tests")
+    seed = 0
     N = 500
     K = 500
-    clauses, signs = random_3sat_generator(0, N, K)
+    random_state = np.random.RandomState(seed)
+    clauses, signs = random_3sat_clauses(random_state, N, K)
     total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
-    #print(A)
-    #print(C)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     A = A.to(device)
     C = C.to(device)
