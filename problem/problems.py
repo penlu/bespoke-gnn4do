@@ -113,22 +113,55 @@ class VertexCoverProblem(OptProblem):
 class SATProblem(OptProblem):
     @staticmethod
     def objective(X, batch):
-        pass
+        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
+        X[0, 0] = 1.
 
+        # calculate objective
+        XX = torch.matmul(X, torch.transpose(X, 0, 1))
+        return torch.sparse.sum(batch.A * XX)
+
+    @staticmethod
     def constraint(X, batch):
-        pass
+        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
+        X[0, 0] = 1.
 
+        # calculate objective
+        XX = torch.matmul(X, torch.transpose(X, 0, 1))
+        penalties = torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
+        return torch.sum(penalties * penalties)
+
+    @staticmethod
     def loss(X, batch):
-        pass
+        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
+        X[0, 0] = 1.
 
+        # calculate objective
+        XX = torch.matmul(X, torch.transpose(X, 0, 1))
+        objective = torch.sparse.sum(batch.A * XX)
+        penalties = torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
+
+        return objective + batch.penalty * torch.sum(penalties * penalties)
+
+    @staticmethod
     def score(args, X, example):
-        pass
+        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
+        X[0, 0] = 1.
 
+        # calculate objective
+        XX = torch.matmul(X, torch.transpose(X, 0, 1))
+        objective = torch.sparse.sum(example.A * XX)
+        penalties = torch.sparse.sum(example.C * XX, dim=(1, 2)).to_dense()
+
+        return -objective - batch.penalty * torch.sum(penalties * penalties)
+
+    @staticmethod
     def greedy(G):
         pass
 
+    @staticmethod
     def sdp(args, example):
         pass
 
+    @staticmethod
     def gurobi(args, example):
         pass
