@@ -3,6 +3,7 @@ from problem.losses import max_cut_score, vertex_cover_score, max_clique_score
 from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_cover
 from problem.baselines import max_cut_sdp, vertex_cover_sdp
 from problem.baselines import max_cut_gurobi, vertex_cover_gurobi
+import torch
 
 def get_problem(args):
     if args.problem_type == 'max_cut':
@@ -11,6 +12,8 @@ def get_problem(args):
         return VertexCoverProblem
     elif args.problem_type == 'max_clique':
         return MaxCliqueProblem
+    elif args.problem_type == 'sat':
+        return SATProblem
     else:
         raise ValueError(f"get_problem got invalid problem_type {args.problem_type}")
 
@@ -137,8 +140,8 @@ class SATProblem(OptProblem):
 
         # calculate objective
         XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.sparse.sum(batch.A * XX)
-        penalties = torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
+        objective = torch.sum(batch.A.to_dense() * XX) #torch.sparse.sum(batch.A * XX)
+        penalties = torch.sum(batch.C.to_dense() * XX, dim=(1, 2)) #torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
 
         return objective + batch.penalty * torch.sum(penalties * penalties)
 

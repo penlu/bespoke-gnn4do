@@ -33,6 +33,7 @@ def construct_generator(args):
     elif args.dataset == 'random-sat':
         gen_p = 0.5 if args.gen_p == None else args.gen_p
         generator = lambda seed: random_3sat_generator(seed, N=args.gen_n, K=args.gen_k, p=gen_p)
+        name = f'sat_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
     else:
         raise ValueError('Got a bad generated dataset: {args.dataset}')
 

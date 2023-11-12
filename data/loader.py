@@ -9,7 +9,6 @@ from torch_geometric.datasets import TUDataset, PPI
 from torch_geometric.transforms import AddRandomWalkPE, Compose, ToDevice
 
 from data.generated import construct_generator, GeneratedDataset, GeneratedIterableDataset
-from data.sat import construct_random_3sat_dataset
 from data.transforms import AddLaplacianEigenvectorPE, ToComplement
 from data.test_sets import construct_kamis_dataset, construct_gset_dataset
 
@@ -19,7 +18,7 @@ generated_datasets = [
   'PowerlawCluster',
   'WattsStrogatz',
   'ForcedRB',
-  'random-3sat',
+  'random-sat',
 ]
 
 TU_datasets = [
@@ -111,10 +110,6 @@ def construct_dataset(args):
                     transform=transform)
     elif args.dataset == 'gset':
         dataset = construct_gset_dataset(args,
-                    pre_transform=pre_transform,
-                    transform=transform)
-    elif args.dataset == 'random-sat':
-        dataset = construct_random_3sat_dataset(args,
                     pre_transform=pre_transform,
                     transform=transform)
     else:

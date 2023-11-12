@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 import torch
 from torch_geometric.utils import to_edge_index
+from torch_geometric.data import Data
 
 # turn a DIMACS input into a clause-list representation
 def dimacs_parser():
@@ -164,12 +165,12 @@ def random_3sat_generator(seed, N=100, K=400, p=0.5):
 
         negative_columns = (decremented < 0).any(dim=0)
         keep_columns = ~negative_columns
-        edge_list = decremented[:, keep_columns]
+        edge_index = decremented[:, keep_columns]
         edge_weight = edge_weight[keep_columns]
 
         yield Data(
             num_nodes=total_vars,
-            edge_list=edge_list,
+            edge_index=edge_index,
             edge_weight=edge_weight,
             A=A, C=C, N=N, K=K,
             pair_to_index=pair_to_index)
