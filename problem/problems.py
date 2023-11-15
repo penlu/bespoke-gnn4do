@@ -4,6 +4,7 @@ from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_
 from problem.baselines import max_cut_sdp, vertex_cover_sdp
 from problem.baselines import max_cut_gurobi, vertex_cover_gurobi
 import torch
+import numpy as np
 
 def get_problem(args):
     if args.problem_type == 'max_cut':
@@ -147,6 +148,10 @@ class SATProblem(OptProblem):
 
     @staticmethod
     def score(args, X, example):
+        if isinstance(X, np.ndarray):
+            X = torch.FloatTensor(X)
+        if len(X.shape) == 1:
+            X = X[:, None]
         X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
         X[0, 0] = 1.
 
