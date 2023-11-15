@@ -160,7 +160,7 @@ class SATProblem(OptProblem):
         objective = torch.sparse.sum(example.A * XX)
         penalties = torch.sparse.sum(example.C * XX, dim=(1, 2)).to_dense()
 
-        return -objective - batch.penalty * torch.sum(penalties * penalties)
+        return -objective - example.penalty * torch.sum(penalties * penalties)
 
     @staticmethod
     def greedy(G):
