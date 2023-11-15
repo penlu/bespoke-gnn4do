@@ -182,8 +182,8 @@ def sat_objective(X, A, C, N, K):
 
     # calculate objective
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    objective = torch.sparse.sum(A * XX)
-    penalties = torch.sparse.sum(C * XX, dim=(1, 2)).to_dense()
+    objective = torch.sum(A.to_dense() * XX)
+    penalties = torch.sum(C.to_dense() * XX, dim=(1, 2))#.to_dense()
 
     return objective, torch.sum(penalties * penalties)
 

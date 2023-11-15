@@ -148,6 +148,9 @@ class SATProblem(OptProblem):
 
     @staticmethod
     def score(args, X, example):
+        from pdb import set_trace as bp
+        #bp()
+        # python train.py --problem_type sat --dataset random-sat --batch_size 1 --infinite True --valid_freq 100 --stepwise True
         if isinstance(X, np.ndarray):
             X = torch.FloatTensor(X)
         if len(X.shape) == 1:
@@ -157,8 +160,8 @@ class SATProblem(OptProblem):
 
         # calculate objective
         XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.sparse.sum(example.A * XX)
-        penalties = torch.sparse.sum(example.C * XX, dim=(1, 2)).to_dense()
+        objective = torch.sum(example.A.to_dense() * XX)
+        penalties = torch.sum(example.C.to_dense() * XX, dim=(1, 2))
 
         return -objective - example.penalty * torch.sum(penalties * penalties)
 

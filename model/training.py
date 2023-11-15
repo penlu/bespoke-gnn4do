@@ -58,7 +58,13 @@ def validate(args, model, val_loader, problem):
     total_count = 0
     with torch.no_grad():
         for batch in val_loader:
-            for example in batch.to_data_list():
+            from pdb import set_trace as bp
+            #bp()
+            if len(batch) == 1:
+                datalist = [batch]
+            else:
+                datalist = batch.to_data_list()
+            for example in datalist:
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
                 loss = problem.loss(x_out, example)
