@@ -175,6 +175,7 @@ def random_3sat_generator(seed, N=100, K=400, p=0.5):
             A=A, C=C, N=N, K=K,
             pair_to_index=pair_to_index)
 
+# produces the number of satisfied clauses
 def sat_objective(X, A, C, N, K):
     # expand X to include e1
     X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
@@ -185,8 +186,9 @@ def sat_objective(X, A, C, N, K):
     objective = torch.sum(A.to_dense() * XX)
     penalties = torch.sum(C.to_dense() * XX, dim=(1, 2))#.to_dense()
 
-    return objective, torch.sum(penalties * penalties)
+    return -objective, torch.sum(penalties * penalties)
 
+# count number of satisfied clauses
 def count_sat_clauses(X, clauses, signs):
     count = 0
     for f in range(len(clauses)):
@@ -202,27 +204,14 @@ def count_sat_clauses(X, clauses, signs):
 
     return count
 
-if __name__ == '__main__':
-    print("hello! I am data/sat.py and it is time to run some tests")
-    seed = 0
-    N = 500
-    K = 500
-    random_state = np.random.RandomState(seed)
-    clauses, signs = random_3sat_clauses(random_state, N, K)
-    total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
+# check count_sat_clauses(clauses, signs, assignment) == sat_objective(compile_sat(clauses, signs, ...), vectorize(assignment))
+# TODO test penalties by perturbing doubles vars
+# TODO get average scores for a random assignment
+def run_equivalence_test(clauses, signs, X):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
     A = A.to(device)
     C = C.to(device)
-
-    #r = 5
-    #X = torch.randn(total_vars, r, device=device)
-    #objective, penalties = sat_objective(X, A, C, N, K)
-    #print(objective)
-    #print(objective, penalties)
-
-    # run test: produce random assignment, then feed to both
-    X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
-    print(count_sat_clauses(X, clauses, signs))
 
     # extend random assignment into ij domain
     X_ext = torch.zeros(total_vars, 1, device=device)
@@ -237,8 +226,21 @@ if __name__ == '__main__':
         X_ext[pair_to_index[(i, k)], 0] = X[i] * X[k]
         X_ext[pair_to_index[(j, k)], 0] = X[j] * X[k]
     objective, penalty = sat_objective(X_ext, A, C, N, K)
+    print(count_sat_clauses(X, clauses, signs))
     print(objective)
     print(C.shape)
     print("should be zero:", penalty)
 
-    #count_sat_clauses(clauses, signs, assignment) == sat_objective(compile_sat(clauses, signs, ...), vectorize(assignment))
+if __name__ == '__main__':
+    print("hello! I am data/sat.py and it is time to run some tests")
+    seed = 0
+    N = 50
+    K = 200
+    random_state = np.random.RandomState(seed)
+    clauses, signs = random_3sat_clauses(random_state, N, K)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
+
+    # run test: produce random assignment, then feed to both
+    run_equivalence_test(clauses, signs, X)

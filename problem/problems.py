@@ -144,7 +144,7 @@ class SATProblem(OptProblem):
         objective = torch.sum(batch.A.to_dense() * XX) #torch.sparse.sum(batch.A * XX)
         penalties = torch.sum(batch.C.to_dense() * XX, dim=(1, 2)) #torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
 
-        return objective + batch.penalty * torch.sum(penalties * penalties)
+        return -objective + batch.penalty * torch.sum(penalties * penalties)
 
     @staticmethod
     def score(args, X, example):
@@ -163,7 +163,7 @@ class SATProblem(OptProblem):
         objective = torch.sum(example.A.to_dense() * XX)
         penalties = torch.sum(example.C.to_dense() * XX, dim=(1, 2))
 
-        return -objective - example.penalty * torch.sum(penalties * penalties)
+        return objective - example.penalty * torch.sum(penalties * penalties)
 
     @staticmethod
     def greedy(G):
