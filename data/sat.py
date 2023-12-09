@@ -152,7 +152,18 @@ def compile_sat(clauses, signs, N, K):
 
     return total_vars, pair_to_index, A, C
 
-def random_3sat_generator(seed, N=100, K=400, p=0.5):
+def random_3sat_generator(seed, n=100, K=400, p=0.5):
+    if isinstance(n, int):
+        N = n
+        n_max = n
+    elif isinstance(n, list) and len(n) == 1:
+        N = n[0]
+        n_max = n[0]
+    elif isinstance(n, list) and len(n) == 2:
+        N, n_max = n
+    else:
+        raise ValueError('random_3sat_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
+
     random_state = np.random.RandomState(seed)
     while True:
         # generate A and C for a random 3-SAT instance
