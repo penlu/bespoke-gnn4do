@@ -24,37 +24,42 @@ def random_3sat_clauses(random_state, N=100, K=50, p=0.5):
 
 # constraints of the form <x_i, x_j> = <x_ij, e1>
 def make_undirected_constraint(total_vars, pair_to_index, i, j):
-    Ci = []; Cv = []
-    Ci.append([i+1, j+1]); Cv.append(1.)
-    Ci.append([pair_to_index[(i, j)]+1, 0]); Cv.append(-1.)
-    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    return C
+    #Ci = []; Cv = []
+    #Ci.append([i+1, j+1]); Cv.append(1.)
+    #Ci.append([pair_to_index[(i, j)]+1, 0]); Cv.append(-1.)
+    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    return [i+1, j+1, pair_to_index[(i, j)]+1, 0]
+    #return C
 
 # constraints of the form <x_i, x_ij> = <x_j, e1>
 def make_directed_constraint(total_vars, pair_to_index, i, j):
     a, b = sorted((i, j))
-    Ci = []; Cv = []
-    Ci.append([i+1, pair_to_index[(a, b)]+1]); Cv.append(1.)
-    Ci.append([j+1, 0]); Cv.append(-1.)
-    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    return C
+    #Ci = []; Cv = []
+    #Ci.append([i+1, pair_to_index[(a, b)]+1]); Cv.append(1.)
+    #Ci.append([j+1, 0]); Cv.append(-1.)
+    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    return [i+1, pair_to_index[(a, b)]+1, j+1, 0]
+    #return C
 
 # constraints of the form <x_i, x_jk> = <x_ij, x_k>
 def make_triangle_constraint(total_vars, pair_to_index, i, j, k):
-    Ci = []; Cv = []
-    Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
-    Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(-1.)
-    C1 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    #Ci = []; Cv = []
+    #Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
+    #Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(-1.)
+    #C1 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    C1 = [i+1, pair_to_index[(j, k)]+1, j+1, pair_to_index[(i, k)]+1]
 
-    Ci = []; Cv = []
-    Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(1.)
-    Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
-    C2 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    #Ci = []; Cv = []
+    #Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(1.)
+    #Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
+    #C2 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    C2 = [j+1, pair_to_index[(i, k)]+1, k+1, pair_to_index[(i, j)]+1]
 
-    Ci = []; Cv = []
-    Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
-    Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
-    C3 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    #Ci = []; Cv = []
+    #Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
+    #Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
+    #C3 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    C3 = [i+1, pair_to_index[(j, k)]+1, k+1, pair_to_index[(i, j)]+1]
 
     return C1, C2, C3
 
@@ -64,12 +69,14 @@ def make_quad_constraint(total_vars, pair_to_index, i, j, k):
     c, d = sorted((j, k))
     e, f = sorted((i, k))
 
-    Ci = []; Cv = []
-    Ci.append([pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1]); Cv.append(1.)
-    Ci.append([e+1, f+1]); Cv.append(-1.)
-    C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
+    #Ci = []; Cv = []
+    #Ci.append([pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1]); Cv.append(1.)
+    #Ci.append([e+1, f+1]); Cv.append(-1.)
+    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
 
-    return C
+    return [pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1, e+1, f+1]
+
+    #return C
 
 # turn SAT problem into A, C sparse tensors, then emplace in pytorch geometric Data object
 def compile_sat(clauses, signs, N, K):
