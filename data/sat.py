@@ -9,6 +9,13 @@ from torch_geometric.data import Data
 def dimacs_parser():
     pass
 
+def dimacs_printer(N, K, clauses, signs):
+    out = f"p cnf {N} {K}\n"
+    signed_clauses = (clauses + 1) * signs
+    for f in range(K):
+        out += f"{signed_clauses[f, 0]} {signed_clauses[f, 1]} {signed_clauses[f, 2]} 0\n"
+    return out
+
 # generate clause-list representation of random 3-SAT problem
 def random_3sat_clauses(random_state, N=100, K=50, p=0.5):
     # generate random clauses
@@ -190,6 +197,7 @@ def random_3sat_generator(seed, n=100, K=400, p=0.5):
             num_nodes=total_vars,
             edge_index=edge_index,
             edge_weight=edge_weight,
+            clauses=clauses, signs=signs,
             A=A, C=C, N=N, K=K,
             pair_to_index=pair_to_index)
 
