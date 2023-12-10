@@ -40,6 +40,7 @@ def construct_generator(args):
     return generator, name
 
 def erdos_renyi_generator(seed, n=100, p=0.15):
+    # TODO all these ITE blocks should get merged
     if isinstance(n, int):
         n_min = n
         n_max = n

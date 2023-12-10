@@ -154,8 +154,8 @@ def compile_sat(clauses, signs, N, K):
         Cs.append(make_quad_constraint(total_vars, pair_to_index, i, k, j))
         Cs.append(make_quad_constraint(total_vars, pair_to_index, j, i, k))
 
-    A = torch.sparse.sum(torch.stack(As), dim=0)
-    C = torch.stack(Cs)
+    A = torch.sparse.sum(torch.stack(As), dim=0).float()
+    C = torch.LongTensor(Cs)
 
     return total_vars, pair_to_index, A, C
 
@@ -201,8 +201,18 @@ def sat_objective(X, A, C, N, K):
 
     # calculate objective
     XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    objective = torch.sum(A.to_dense() * XX)
-    penalties = torch.sum(C.to_dense() * XX, dim=(1, 2))#.to_dense()
+    objective = torch.trace(torch.matmul(A, XX))
+
+    # calculate penalties
+    x1_i = X[C[:, 0]]
+    x1_j = X[C[:, 1]]
+    x2_i = X[C[:, 2]]
+    x2_j = X[C[:, 3]]
+
+    X1 = torch.sum(x1_i * x1_j, dim=1)
+    X2 = torch.sum(x2_i * x2_j, dim=1)
+
+    penalties = X2 - X1
 
     return -objective, torch.sum(penalties * penalties)
 

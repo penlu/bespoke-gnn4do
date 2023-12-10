@@ -141,8 +141,18 @@ class SATProblem(OptProblem):
 
         # calculate objective
         XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.sum(batch.A.to_dense() * XX) #torch.sparse.sum(batch.A * XX)
-        penalties = torch.sum(batch.C.to_dense() * XX, dim=(1, 2)) #torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
+        objective = torch.trace(torch.matmul(batch.A, XX))
+
+        # calculate penalties
+        x1_i = X[batch.C[:, 0]]
+        x1_j = X[batch.C[:, 1]]
+        x2_i = X[batch.C[:, 2]]
+        x2_j = X[batch.C[:, 3]]
+
+        X1 = torch.sum(x1_i * x1_j, dim=1)
+        X2 = torch.sum(x2_i * x2_j, dim=1)
+
+        penalties = X2 - X1
 
         return -objective + batch.penalty * torch.sum(penalties * penalties)
 
@@ -160,8 +170,17 @@ class SATProblem(OptProblem):
 
         # calculate objective
         XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.sum(example.A.to_dense() * XX)
-        penalties = torch.sum(example.C.to_dense() * XX, dim=(1, 2))
+        objective = torch.trace(torch.matmul(example.A, XX))
+
+        x1_i = X[example.C[:, 0]]
+        x1_j = X[example.C[:, 1]]
+        x2_i = X[example.C[:, 2]]
+        x2_j = X[example.C[:, 3]]
+
+        X1 = torch.sum(x1_i * x1_j, dim=1)
+        X2 = torch.sum(x2_i * x2_j, dim=1)
+
+        penalties = X2 - X1
 
         return objective - example.penalty * torch.sum(penalties * penalties)
 
