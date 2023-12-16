@@ -5,6 +5,64 @@ import torch
 from torch_geometric.utils import to_edge_index
 from torch_geometric.data import Data
 
+class SDPCompiler():
+    def __init__(self):
+        self.constant = 0.
+        self.linear = {}
+        self.quadratic = {}
+        self.constraints3 = []
+        self.constraints4 = []
+
+    def add_constant(self, v):
+        self.constant += v
+
+    def add_linear(self, i, v):
+        self.linear[i] = self.linear.get(i, 0.) + v
+
+    def add_quadratic(self, i, j, v):
+        self.quadratic[(i, j)] = self.quadratic.get((i, j), 0.) + v
+
+    # only supporting constraints of form <e1, i> = <j, k>
+    def add_constraint3(self, i, j, k):
+        self.constraints3.append([i, j, k])
+
+    # only supporting constraints of form <i1, j1> = <i2, j2>
+    def add_constraint4(self, i1, j1, i2, j2):
+        self.constraints4.append([i1, j1, i2, j2])
+
+    # returns:
+    # A0 -- constant term
+    # A1i -- linear term indices
+    # A1w -- linear term weights
+    # A2i -- quadratic term indices -- 2 x E
+    # A2w -- quadratic term weights -- E
+    # C3 -- constraint indices -- 3 x something
+    # C4 -- constraint indices -- 4 x something
+    def compile(self):
+        A0 = self.constant
+        A1i = torch.LongTensor(list(self.linear.keys()))
+        A1w = torch.FloatTensor(list(self.linear.values()))
+        A2i = torch.LongTensor(list(self.quadratic.keys()))
+        A2w = torch.FloatTensor(list(self.quadratic.values()))
+        C3 = torch.LongTensor(list(self.constraints3))
+        C4 = torch.LongTensor(list(self.constraints4))
+
+        return A0, A1i, A1w, A2i, A2w, C3, C4
+
+def sdp_objective(X, A0, A1i, A1w, A2i, A2w):
+    const = torch.sum(A0)
+    linear = torch.sum(X[A1i, 0] * A1w)
+    edges = torch.sum(X[A2i[:, 0]] * X[A2i[:, 1]], dim=1)
+    quadratic = torch.sum(edges * A2w)
+    objective = const + linear + quadratic
+    return objective
+
+def sdp_constraint(X, C3, C4):
+    constraints3 = X[C3[:, 0], 0] - torch.sum(X[C3[:, 1]] * X[C3[:, 2]], dim=1)
+    constraints4 = torch.sum(X[C4[:, 0]] * X[C4[:, 1]] - X[C4[:, 2]] * X[C4[:, 3]], dim=1)
+    constraint = torch.sum(constraints3 * constraints3) + torch.sum(constraints4 + constraints4)
+    return constraint / 4.
+
 # turn a DIMACS input into a clause-list representation
 def dimacs_parser():
     pass
@@ -30,60 +88,26 @@ def random_3sat_clauses(random_state, N=100, K=50, p=0.5):
     return clauses, signs
 
 # constraints of the form <x_i, x_j> = <x_ij, e1>
-def make_undirected_constraint(total_vars, pair_to_index, i, j):
-    #Ci = []; Cv = []
-    #Ci.append([i+1, j+1]); Cv.append(1.)
-    #Ci.append([pair_to_index[(i, j)]+1, 0]); Cv.append(-1.)
-    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    return [i+1, j+1, pair_to_index[(i, j)]+1, 0]
-    #return C
+def add_undirected_constraint(compiler, pair_to_index, i, j):
+    compiler.add_constraint3(pair_to_index[i, j], i, j)
 
 # constraints of the form <x_i, x_ij> = <x_j, e1>
-def make_directed_constraint(total_vars, pair_to_index, i, j):
+def add_directed_constraint(compiler, pair_to_index, i, j):
     a, b = sorted((i, j))
-    #Ci = []; Cv = []
-    #Ci.append([i+1, pair_to_index[(a, b)]+1]); Cv.append(1.)
-    #Ci.append([j+1, 0]); Cv.append(-1.)
-    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    return [i+1, pair_to_index[(a, b)]+1, j+1, 0]
-    #return C
+    compiler.add_constraint3(j, i, pair_to_index[a, b])
 
 # constraints of the form <x_i, x_jk> = <x_ij, x_k>
-def make_triangle_constraint(total_vars, pair_to_index, i, j, k):
-    #Ci = []; Cv = []
-    #Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
-    #Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(-1.)
-    #C1 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    C1 = [i+1, pair_to_index[(j, k)]+1, j+1, pair_to_index[(i, k)]+1]
-
-    #Ci = []; Cv = []
-    #Ci.append([j+1, pair_to_index[(i, k)]+1]); Cv.append(1.)
-    #Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
-    #C2 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    C2 = [j+1, pair_to_index[(i, k)]+1, k+1, pair_to_index[(i, j)]+1]
-
-    #Ci = []; Cv = []
-    #Ci.append([i+1, pair_to_index[(j, k)]+1]); Cv.append(1.)
-    #Ci.append([k+1, pair_to_index[(i, j)]+1]); Cv.append(-1.)
-    #C3 = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-    C3 = [i+1, pair_to_index[(j, k)]+1, k+1, pair_to_index[(i, j)]+1]
-
-    return C1, C2, C3
+def add_triangle_constraints(compiler, pair_to_index, i, j, k):
+    compiler.add_constraint4(i, pair_to_index[j, k], j, pair_to_index[i, k])
+    compiler.add_constraint4(j, pair_to_index[i, k], k, pair_to_index[i, j])
+    compiler.add_constraint4(i, pair_to_index[j, k], k, pair_to_index[i, j])
 
 # constraints of the form <x_ij, x_jk> = <x_i, x_k>
-def make_quad_constraint(total_vars, pair_to_index, i, j, k):
+def add_quad_constraint(compiler, pair_to_index, i, j, k):
     a, b = sorted((i, j))
     c, d = sorted((j, k))
     e, f = sorted((i, k))
-
-    #Ci = []; Cv = []
-    #Ci.append([pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1]); Cv.append(1.)
-    #Ci.append([e+1, f+1]); Cv.append(-1.)
-    #C = torch.sparse_coo_tensor(indices=list(zip(*Ci)), values=Cv, size=(total_vars+1, total_vars+1))
-
-    return [pair_to_index[(a, b)]+1, pair_to_index[(c, d)]+1, e+1, f+1]
-
-    #return C
+    compiler.add_constraint4(e, f, pair_to_index[a, b], pair_to_index[c, d])
 
 # turn SAT problem into A, C sparse tensors, then emplace in pytorch geometric Data object
 def compile_sat(clauses, signs, N, K):
@@ -105,6 +129,7 @@ def compile_sat(clauses, signs, N, K):
     # compile the SAT problem to A and C sparse tensors
     As = [] # list of weight matrices
     Cs = [] # list of constraint matrices
+    compiler = SDPCompiler()
     for f in range(K):
         i = int(clauses[f, 0])
         j = int(clauses[f, 1])
@@ -115,56 +140,50 @@ def compile_sat(clauses, signs, N, K):
         weight = 1.
 
         # CONSTRUCT A TERMS FOR THIS CLAUSE
-        Ai = []
-        Av = []
 
         # order 1 entries
-        Ai.append([i+1, 0]); Av.append(tau_i)
-        Ai.append([j+1, 0]); Av.append(tau_j)
-        Ai.append([k+1, 0]); Av.append(tau_k)
+        compiler.add_linear(i, tau_i * weight / 8.)
+        compiler.add_linear(j, tau_j * weight / 8.)
+        compiler.add_linear(k, tau_k * weight / 8.)
 
         # order 2 entries
-        Ai.append([i+1, j+1]); Av.append(-tau_i * tau_j)
-        Ai.append([i+1, k+1]); Av.append(-tau_i * tau_k)
-        Ai.append([j+1, k+1]); Av.append(-tau_j * tau_k)
+        compiler.add_quadratic(i, j, -tau_i * tau_j * weight / 8.)
+        compiler.add_quadratic(i, k, -tau_i * tau_k * weight / 8.)
+        compiler.add_quadratic(j, k, -tau_j * tau_k * weight / 8.)
 
         # order 3 entries
-        Ai.append([pair_to_index[(i, j)]+1, k+1]); Av.append(tau_i * tau_j * tau_k / 3.)
-        Ai.append([pair_to_index[(i, k)]+1, j+1]); Av.append(tau_i * tau_j * tau_k / 3.)
-        Ai.append([pair_to_index[(j, k)]+1, i+1]); Av.append(tau_i * tau_j * tau_k / 3.)
+        compiler.add_quadratic(k, pair_to_index[i, j], tau_i * tau_j * tau_k * weight / 24.)
+        compiler.add_quadratic(j, pair_to_index[i, k], tau_i * tau_j * tau_k * weight / 24.)
+        compiler.add_quadratic(i, pair_to_index[j, k], tau_i * tau_j * tau_k * weight / 24.)
 
         # the constant term
-        Ai.append([0, 0]); Av.append(7.)
-
-        A = torch.sparse_coo_tensor(indices=list(zip(*Ai)), values=Av, size=(total_vars+1, total_vars+1))
-        As.append(A * weight / 8.)
+        compiler.add_constant(7./8.)
 
         # ADD C TERMS FOR THIS CLAUSE
         # undirected constraints
-        Cs.append(make_undirected_constraint(total_vars, pair_to_index, i, j))
-        Cs.append(make_undirected_constraint(total_vars, pair_to_index, j, k))
-        Cs.append(make_undirected_constraint(total_vars, pair_to_index, i, k))
+        add_undirected_constraint(compiler, pair_to_index, i, j)
+        add_undirected_constraint(compiler, pair_to_index, j, k)
+        add_undirected_constraint(compiler, pair_to_index, i, k)
 
         # directed constraints
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, i, j))
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, j, i))
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, i, k))
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, k, i))
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, j, k))
-        Cs.append(make_directed_constraint(total_vars, pair_to_index, k, j))
+        add_directed_constraint(compiler, pair_to_index, i, j)
+        add_directed_constraint(compiler, pair_to_index, j, i)
+        add_directed_constraint(compiler, pair_to_index, i, k)
+        add_directed_constraint(compiler, pair_to_index, k, i)
+        add_directed_constraint(compiler, pair_to_index, j, k)
+        add_directed_constraint(compiler, pair_to_index, k, j)
 
         # triangle constraints
-        Cs += make_triangle_constraint(total_vars, pair_to_index, i, j, k)
+        add_triangle_constraints(compiler, pair_to_index, i, j, k)
 
         # quad constraints
-        Cs.append(make_quad_constraint(total_vars, pair_to_index, i, j, k))
-        Cs.append(make_quad_constraint(total_vars, pair_to_index, i, k, j))
-        Cs.append(make_quad_constraint(total_vars, pair_to_index, j, i, k))
+        add_quad_constraint(compiler, pair_to_index, i, j, k)
+        add_quad_constraint(compiler, pair_to_index, i, k, j)
+        add_quad_constraint(compiler, pair_to_index, j, i, k)
 
-    A = torch.sparse.sum(torch.stack(As), dim=0).float()
-    C = torch.LongTensor(Cs)
+    A0, A1i, A1w, A2i, A2w, C3, C4 = compiler.compile()
 
-    return total_vars, pair_to_index, A, C
+    return total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4
 
 def random_3sat_generator(seed, n=100, K=400, p=0.5):
     if isinstance(n, int):
@@ -182,47 +201,15 @@ def random_3sat_generator(seed, n=100, K=400, p=0.5):
     while True:
         # generate A and C for a random 3-SAT instance
         clauses, signs = random_3sat_clauses(random_state, N, K, p)
-        total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
-
-        # represent these as a Data object
-        edge_list, edge_weight = to_edge_index(A)
-        decremented = edge_list - 1
-
-        negative_columns = (decremented < 0).any(dim=0)
-        keep_columns = ~negative_columns
-        edge_index = decremented[:, keep_columns]
-        edge_weight = edge_weight[keep_columns]
+        total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
 
         yield Data(
             num_nodes=total_vars,
-            edge_index=edge_index,
-            edge_weight=edge_weight,
+            edge_index=A2i.t(),
+            edge_weight=A2w,
             clauses=clauses, signs=signs,
-            A=A, C=C, N=N, K=K,
-            pair_to_index=pair_to_index)
-
-# produces the number of satisfied clauses
-def sat_objective(X, A, C, N, K):
-    # expand X to include e1
-    X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
-    X[0, 0] = 1.
-
-    # calculate objective
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    objective = torch.trace(torch.matmul(A, XX))
-
-    # calculate penalties
-    x1_i = X[C[:, 0]]
-    x1_j = X[C[:, 1]]
-    x2_i = X[C[:, 2]]
-    x2_j = X[C[:, 3]]
-
-    X1 = torch.sum(x1_i * x1_j, dim=1)
-    X2 = torch.sum(x2_i * x2_j, dim=1)
-
-    penalties = X2 - X1
-
-    return -objective, torch.sum(penalties * penalties)
+            A0=A0, A1i=A1i, A1w=A1w, A2i=A2i, A2w=A2w, C3=C3, C4=C4)
+            #N=N, K=K, pair_to_index=pair_to_index)
 
 # count number of satisfied clauses
 def count_sat_clauses(X, clauses, signs):
@@ -245,9 +232,13 @@ def count_sat_clauses(X, clauses, signs):
 # TODO get average scores for a random assignment
 def run_equivalence_test(clauses, signs, X):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    total_vars, pair_to_index, A, C = compile_sat(clauses, signs, N, K)
-    A = A.to(device)
-    C = C.to(device)
+    total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
+    A1i = A1i.to(device)
+    A1w = A1w.to(device)
+    A2i = A2i.to(device)
+    A2w = A2w.to(device)
+    C3 = C3.to(device)
+    C4 = C4.to(device)
 
     # extend random assignment into ij domain
     X_ext = torch.zeros(total_vars, 1, device=device)
@@ -261,11 +252,11 @@ def run_equivalence_test(clauses, signs, X):
         X_ext[pair_to_index[(i, j)], 0] = X[i] * X[j]
         X_ext[pair_to_index[(i, k)], 0] = X[i] * X[k]
         X_ext[pair_to_index[(j, k)], 0] = X[j] * X[k]
-    objective, penalty = sat_objective(X_ext, A, C, N, K)
+    objective = sdp_objective(X_ext, A0, A1i, A1w, A2i, A2w)
+    constraint = sdp_constraint(X_ext, C3, C4)
     print(count_sat_clauses(X, clauses, signs))
     print(objective)
-    print(C.shape)
-    print("should be zero:", penalty)
+    print("should be zero:", constraint)
 
 if __name__ == '__main__':
     print("hello! I am data/sat.py and it is time to run some tests")

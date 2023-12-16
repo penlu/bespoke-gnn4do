@@ -3,6 +3,7 @@ from problem.losses import max_cut_score, vertex_cover_score, max_clique_score
 from networkx.algorithms.approximation import one_exchange, min_weighted_vertex_cover
 from problem.baselines import max_cut_sdp, vertex_cover_sdp
 from problem.baselines import max_cut_gurobi, vertex_cover_gurobi
+from data.sat import sdp_objective, sdp_constraint
 import torch
 import numpy as np
 
@@ -117,72 +118,48 @@ class VertexCoverProblem(OptProblem):
 class SATProblem(OptProblem):
     @staticmethod
     def objective(X, batch):
-        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
-        X[0, 0] = 1.
+        A0 = batch.A0
+        A1i = batch.A1i
+        A1w = batch.A1w
+        A2i = batch.A2i
+        A2w = batch.A2w
 
-        # calculate objective
-        XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        return torch.sparse.sum(batch.A * XX)
+        return -sdp_objective(X, A0, A1i, A1w, A2i, A2w)
 
     @staticmethod
     def constraint(X, batch):
-        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
-        X[0, 0] = 1.
-
-        # calculate objective
-        XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        penalties = torch.sparse.sum(batch.C * XX, dim=(1, 2)).to_dense()
-        return torch.sum(penalties * penalties)
+        return sdp_constraint(X, batch.C3, batch.C4)
 
     @staticmethod
     def loss(X, batch):
-        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
-        X[0, 0] = 1.
+        A0 = batch.A0
+        A1i = batch.A1i
+        A1w = batch.A1w
+        A2i = batch.A2i
+        A2w = batch.A2w
 
-        # calculate objective
-        XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.trace(torch.matmul(batch.A, XX))
+        objective = sdp_objective(X, A0, A1i, A1w, A2i, A2w)
+        constraint = sdp_constraint(X, batch.C3, batch.C4)
 
-        # calculate penalties
-        x1_i = X[batch.C[:, 0]]
-        x1_j = X[batch.C[:, 1]]
-        x2_i = X[batch.C[:, 2]]
-        x2_j = X[batch.C[:, 3]]
-
-        X1 = torch.sum(x1_i * x1_j, dim=1)
-        X2 = torch.sum(x2_i * x2_j, dim=1)
-
-        penalties = X2 - X1
-
-        return -objective + batch.penalty * torch.sum(penalties * penalties)
+        return -objective + batch.penalty * constraint
 
     @staticmethod
     def score(args, X, example):
-        from pdb import set_trace as bp
-        #bp()
-        # python train.py --problem_type sat --dataset random-sat --batch_size 1 --infinite True --valid_freq 100 --stepwise True
         if isinstance(X, np.ndarray):
             X = torch.FloatTensor(X)
         if len(X.shape) == 1:
             X = X[:, None]
-        X = torch.cat([torch.zeros(1, X.shape[1], device=X.device), X], dim=0)
-        X[0, 0] = 1.
 
-        # calculate objective
-        XX = torch.matmul(X, torch.transpose(X, 0, 1))
-        objective = torch.trace(torch.matmul(example.A, XX))
+        A0 = example.A0
+        A1i = example.A1i
+        A1w = example.A1w
+        A2i = example.A2i
+        A2w = example.A2w
 
-        x1_i = X[example.C[:, 0]]
-        x1_j = X[example.C[:, 1]]
-        x2_i = X[example.C[:, 2]]
-        x2_j = X[example.C[:, 3]]
+        objective = sdp_objective(X, A0, A1i, A1w, A2i, A2w)
+        constraint = sdp_constraint(X, example.C3, example.C4)
 
-        X1 = torch.sum(x1_i * x1_j, dim=1)
-        X2 = torch.sum(x2_i * x2_j, dim=1)
-
-        penalties = X2 - X1
-
-        return objective - example.penalty * torch.sum(penalties * penalties)
+        return objective - example.penalty * constraint
 
     @staticmethod
     def greedy(G):
