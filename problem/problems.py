@@ -118,28 +118,16 @@ class VertexCoverProblem(OptProblem):
 class SATProblem(OptProblem):
     @staticmethod
     def objective(X, batch):
-        A0 = batch.A0
-        A1i = batch.A1i
-        A1w = batch.A1w
-        A2i = batch.A2i
-        A2w = batch.A2w
-
-        return -sdp_objective(X, A0, A1i, A1w, A2i, A2w)
+        return -sdp_objective(X, batch)
 
     @staticmethod
     def constraint(X, batch):
-        return sdp_constraint(X, batch.C3, batch.C4)
+        return sdp_constraint(X, batch)
 
     @staticmethod
     def loss(X, batch):
-        A0 = batch.A0
-        A1i = batch.A1i
-        A1w = batch.A1w
-        A2i = batch.A2i
-        A2w = batch.A2w
-
-        objective = sdp_objective(X, A0, A1i, A1w, A2i, A2w)
-        constraint = sdp_constraint(X, batch.C3, batch.C4)
+        objective = sdp_objective(X, batch)
+        constraint = sdp_constraint(X, batch)
 
         return -objective + batch.penalty * constraint
 
@@ -150,14 +138,8 @@ class SATProblem(OptProblem):
         if len(X.shape) == 1:
             X = X[:, None]
 
-        A0 = example.A0
-        A1i = example.A1i
-        A1w = example.A1w
-        A2i = example.A2i
-        A2w = example.A2w
-
-        objective = sdp_objective(X, A0, A1i, A1w, A2i, A2w)
-        constraint = sdp_constraint(X, example.C3, example.C4)
+        objective = sdp_objective(X, example)
+        constraint = sdp_constraint(X, example)
 
         return objective - example.penalty * constraint
 

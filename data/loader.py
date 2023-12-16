@@ -137,9 +137,9 @@ def construct_loaders(args, mode=None):
             return train_loader
         elif mode is None:
             # TODO make the validation set size controllable from args
-            # TODO make the test_loader
-            val_loader = DataLoader(list(itertools.islice(dataset, 1000)), batch_size=args.batch_size, shuffle=False)
-            test_loader = DataLoader(list(itertools.islice(dataset, 1000)), batch_size=args.batch_size, shuffle=False)
+            extra_data = list(itertools.islice(dataset, 2000))
+            val_loader = DataLoader(extra_data[:1000], batch_size=args.batch_size, shuffle=False)
+            test_loader = DataLoader(extra_data[1000:], batch_size=args.batch_size, shuffle=False)
             return train_loader, val_loader, test_loader
         else:
             raise ValueError(f"Invalid mode passed into construct_loaders: {mode}")

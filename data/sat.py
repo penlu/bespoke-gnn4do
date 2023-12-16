@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import torch
 from torch_geometric.utils import to_edge_index
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 
 class SDPCompiler():
     def __init__(self):
@@ -49,18 +49,37 @@ class SDPCompiler():
 
         return A0, A1i, A1w, A2i, A2w, C3, C4
 
-def sdp_objective(X, A0, A1i, A1w, A2i, A2w):
-    const = torch.sum(A0)
+def sdp_objective(X, batch):
+    # constant term
+    if isinstance(batch.A0, float):
+        const = batch.A0
+    else:
+        const = torch.sum(batch.A0)
+
+    # linear term ("bias")
+    A1i = batch.bias_index
+    A1w = batch.bias_weight
     linear = torch.sum(X[A1i, 0] * A1w)
-    edges = torch.sum(X[A2i[:, 0]] * X[A2i[:, 1]], dim=1)
+
+    # quadratic term ("edge")
+    A2i = batch.edge_index
+    A2w = batch.edge_weight
+    edges = torch.sum(X[A2i[0, :]] * X[A2i[1, :]], dim=1)
     quadratic = torch.sum(edges * A2w)
+
     objective = const + linear + quadratic
     return objective
 
-def sdp_constraint(X, C3, C4):
-    constraints3 = X[C3[:, 0], 0] - torch.sum(X[C3[:, 1]] * X[C3[:, 2]], dim=1)
-    constraints4 = torch.sum(X[C4[:, 0]] * X[C4[:, 1]] - X[C4[:, 2]] * X[C4[:, 3]], dim=1)
-    constraint = torch.sum(constraints3 * constraints3) + torch.sum(constraints4 + constraints4)
+def sdp_constraint(X, batch):
+    # constraints involving e1
+    C3 = batch.C3_index
+    constraints3 = X[C3[0, :], 0] - torch.sum(X[C3[1, :]] * X[C3[2, :]], dim=1)
+
+    # constraints not involving e1
+    C4 = batch.C4_index
+    constraints4 = torch.sum(X[C4[0, :]] * X[C4[1, :]] - X[C4[2, :]] * X[C4[3, :]], dim=1)
+
+    constraint = torch.sum(constraints3 * constraints3) + torch.sum(constraints4 * constraints4)
     return constraint / 4.
 
 # turn a DIMACS input into a clause-list representation
@@ -185,6 +204,22 @@ def compile_sat(clauses, signs, N, K):
 
     return total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4
 
+def sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4):
+    return Data(
+        num_nodes=total_vars,
+        bias_index=A1i,
+        bias_weight=A1w,
+        edge_index=A2i.t(),
+        edge_weight=A2w,
+        C3_index=C3.t(),
+        C4_index=C4.t(),
+        A0=A0)
+        #clauses=clauses, signs=signs,
+        #N=N, K=K, pair_to_index=pair_to_index
+
+def print_sat_data(d):
+    print(f"total_vars={d.num_nodes}\nbias_index={d.bias_index}\nbias_weight={d.bias_weight}\nedge_index={d.edge_index}\nedge_weight={d.edge_weight}\nC3_index={d.C3_index}\nC4_index={d.C4_index}")
+
 def random_3sat_generator(seed, n=100, K=400, p=0.5):
     if isinstance(n, int):
         N = n
@@ -203,13 +238,7 @@ def random_3sat_generator(seed, n=100, K=400, p=0.5):
         clauses, signs = random_3sat_clauses(random_state, N, K, p)
         total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
 
-        yield Data(
-            num_nodes=total_vars,
-            edge_index=A2i.t(),
-            edge_weight=A2w,
-            clauses=clauses, signs=signs,
-            A0=A0, A1i=A1i, A1w=A1w, A2i=A2i, A2w=A2w, C3=C3, C4=C4)
-            #N=N, K=K, pair_to_index=pair_to_index)
+        yield sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4)
 
 # count number of satisfied clauses
 def count_sat_clauses(X, clauses, signs):
@@ -233,12 +262,8 @@ def count_sat_clauses(X, clauses, signs):
 def run_equivalence_test(clauses, signs, X):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
-    A1i = A1i.to(device)
-    A1w = A1w.to(device)
-    A2i = A2i.to(device)
-    A2w = A2w.to(device)
-    C3 = C3.to(device)
-    C4 = C4.to(device)
+    data = sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4)
+    data = data.to(device)
 
     # extend random assignment into ij domain
     X_ext = torch.zeros(total_vars, 1, device=device)
@@ -252,8 +277,8 @@ def run_equivalence_test(clauses, signs, X):
         X_ext[pair_to_index[(i, j)], 0] = X[i] * X[j]
         X_ext[pair_to_index[(i, k)], 0] = X[i] * X[k]
         X_ext[pair_to_index[(j, k)], 0] = X[j] * X[k]
-    objective = sdp_objective(X_ext, A0, A1i, A1w, A2i, A2w)
-    constraint = sdp_constraint(X_ext, C3, C4)
+    objective = sdp_objective(X_ext, data)
+    constraint = sdp_constraint(X_ext, data)
     print(count_sat_clauses(X, clauses, signs))
     print(objective)
     print("should be zero:", constraint)
@@ -271,3 +296,14 @@ if __name__ == '__main__':
 
     # run test: produce random assignment, then feed to both
     run_equivalence_test(clauses, signs, X)
+
+    gen = random_3sat_generator(0, n=4, K=2, p=0.5)
+    d1 = gen.__next__()
+    d2 = gen.__next__()
+    print_sat_data(d1)
+    print()
+    print_sat_data(d2)
+    print()
+
+    batch = Batch.from_data_list([d1, d2])
+    print_sat_data(batch)

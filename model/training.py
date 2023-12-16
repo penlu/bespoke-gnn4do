@@ -58,8 +58,6 @@ def validate(args, model, val_loader, problem):
     total_count = 0
     with torch.no_grad():
         for batch in val_loader:
-            from pdb import set_trace as bp
-            #bp()
             if len(batch) == 1:
                 datalist = [batch]
             else:
