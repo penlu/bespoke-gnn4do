@@ -11,20 +11,16 @@ from functools import partial
 # X should have shape (N, r)
 def max_cut_obj(X, batch):
     # compute loss
-    A = to_torch_csr_tensor(batch.edge_index, batch.edge_weight, size=X.shape[0])
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
+    X0 = X[batch.edge_index[0]]
+    X1 = X[batch.edge_index[1]]
+    edges = torch.sum(X0 * X1, dim=1)
+    obj = torch.sum(edges * batch.edge_weight) / 2
 
     return obj
 
 def vertex_cover_obj(X, batch):
     # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
     N = X.shape[0]
-    A = to_dense_adj(batch.edge_index, max_num_nodes=N)[0]
-    #if torch.is_grad_enabled():
-    #    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
-    #else:
-    #    A = to_torch_coo_tensor(edge_index, size=N)
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
@@ -34,7 +30,6 @@ def vertex_cover_obj(X, batch):
 def vertex_cover_constraint(X, batch):
     # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
     N = X.shape[0]
-    A = to_dense_adj(batch.edge_index, max_num_nodes=N)[0]
 
     # now calculate penalty for uncovered edges
     # phi is matrix of dimension N by N for error per edge
@@ -43,20 +38,9 @@ def vertex_cover_constraint(X, batch):
     e1 = torch.zeros_like(X) # (num_edges, hidden)
     e1[:, 0] = 1
     Xm = X - e1
-    XX = torch.matmul(Xm, torch.transpose(Xm, 0, 1))
-    phi_square = A * (XX * XX)
 
-    # XXX the old calculation
-    #XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    #x_i = X[:, 0].view(-1, 1) # (N, 1)
-    #x_j = torch.transpose(x_i, 0, 1) # (1, N)
-    #phi = A - A * (x_i + x_j) + A * XX
-    #phi_square = phi * phi
-    #print("difference:", torch.linalg.matrix_norm(phi_square - phi * phi))
-
-    # division by 2 because phi_square is symmetric and overcounts by 2
-    # division by 2 again because constant penalty/2 * phi^2
-    constraint = torch.sum(phi_square) / 4.
+    penalties = torch.sum(Xm[batch.edge_index[0]] * Xm[batch.edge_index[1]], dim=1) / 2.
+    constraint = torch.sum(penalties * penalties)
     return constraint
 
 # we are receiving the _complement_ of the target graph
