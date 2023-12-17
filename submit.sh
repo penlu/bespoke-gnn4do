@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o 230925_run.%j.out
-#SBATCH --job-name="230925_run"
+#SBATCH -o 231216_sat.%j.out
+#SBATCH --job-name="231216_sat"
 #SBATCH -N 1
 #SBATCH -c 20
 #SBATCH --gres=gpu:volta:1
