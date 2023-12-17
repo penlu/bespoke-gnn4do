@@ -214,6 +214,8 @@ def sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4):
         C3_index=C3.t(),
         C4_index=C4.t(),
         A0=A0)
+
+        # including these would require custom batching rules!
         #clauses=clauses, signs=signs,
         #N=N, K=K, pair_to_index=pair_to_index
 
@@ -274,9 +276,9 @@ def run_equivalence_test(clauses, signs, X):
         i = int(clauses[f, 0])
         j = int(clauses[f, 1])
         k = int(clauses[f, 2])
-        X_ext[pair_to_index[(i, j)], 0] = X[i] * X[j]
-        X_ext[pair_to_index[(i, k)], 0] = X[i] * X[k]
-        X_ext[pair_to_index[(j, k)], 0] = X[j] * X[k]
+        X_ext[pair_to_index[i, j], 0] = X[i] * X[j]
+        X_ext[pair_to_index[i, k], 0] = X[i] * X[k]
+        X_ext[pair_to_index[j, k], 0] = X[j] * X[k]
     objective = sdp_objective(X_ext, data)
     constraint = sdp_constraint(X_ext, data)
     print(count_sat_clauses(X, clauses, signs))

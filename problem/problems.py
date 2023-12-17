@@ -122,6 +122,11 @@ class SATProblem(OptProblem):
 
     @staticmethod
     def constraint(X, batch):
+        if isinstance(X, np.ndarray):
+            X = torch.FloatTensor(X)
+        if len(X.shape) == 1:
+            X = X[:, None]
+
         return sdp_constraint(X, batch)
 
     @staticmethod

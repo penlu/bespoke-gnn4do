@@ -55,6 +55,7 @@ def featurize_batch(args, batch):
 def validate(args, model, val_loader, problem):
     total_loss = 0.
     total_score = 0.
+    total_constraint = 0.
     total_count = 0
     with torch.no_grad():
         for batch in val_loader:
@@ -80,10 +81,11 @@ def validate(args, model, val_loader, problem):
                 # count the score
                 score = problem.score(args, x_proj, example)
                 total_score += score.cpu().detach().numpy()
+                total_constraint += problem.constraint(x_proj, example).cpu().detach().numpy()
 
                 total_count += 1
 
-    return total_loss / total_count, total_score / total_count
+    return total_loss / total_count, total_score / total_count, total_constraint / total_count
 
 def train(args, model, train_loader, optimizer, problem, val_loader=None, test_loader=None):
     '''Main training loop:
@@ -96,8 +98,10 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
     train_losses = []
     valid_losses = []
     valid_scores = []
+    valid_constraints = []
     test_losses = []
     test_scores = []
+    test_constraints = []
 
     model.to(args.device)
 
@@ -147,26 +151,28 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
-                    valid_loss, valid_score = validate(args, model, val_loader, problem)
+                    valid_loss, valid_score, valid_constraint = validate(args, model, val_loader, problem)
                     # save model if it's the current best
                     if len(valid_scores)==0 or valid_score > max(valid_scores):
                         save_model(model, f"{model_folder}/best_model.pt")
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
+                    valid_constraints.append(valid_constraint)
                     valid_time = time.time() - valid_start_time
                     
                     # test
                     if test_loader is not None:
-                        test_loss, test_score = validate(args, model, test_loader, problem)
+                        test_loss, test_score, test_constraint = validate(args, model, test_loader, problem)
                         test_losses.append(test_loss)
                         test_scores.append(test_score)
+                        test_constraints.append(test_constraint)
                     else:
                         test_loss = np.inf
                         test_score = -np.inf
 
-                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} \n\
-                                valid_loss={valid_loss} valid_score={valid_score} \n\
-                                test_loss={test_loss} test_score={test_score}")
+                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f}\n\
+                                valid_loss={valid_loss} valid_score={valid_score} valid_constraint={valid_constraint}\n\
+                                test_loss={test_loss} test_score={test_score} test_constraint={test_constraint}")
 
                 # check if training is done
                 if steps >= args.steps:
@@ -209,8 +215,10 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
     np.save(os.path.join(args.log_dir, "train_losses.npy"), train_losses)
     np.save(os.path.join(args.log_dir, "valid_losses.npy"), valid_losses)
     np.save(os.path.join(args.log_dir, "valid_scores.npy"), valid_scores)
+    np.save(os.path.join(args.log_dir, "valid_constraints.npy"), valid_constraints)
     np.save(os.path.join(args.log_dir, "test_losses.npy"), test_losses)
     np.save(os.path.join(args.log_dir, "test_scores.npy"), test_scores)
+    np.save(os.path.join(args.log_dir, "test_constraints.npy"), test_constraints)
 
 
 def predict(model, loader, args):
