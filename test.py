@@ -84,6 +84,8 @@ if __name__ == '__main__':
     # load model
     model = load_model(model, os.path.join(args.model_folder, args.model_file))
     model.to(args.device)
+    from pdb import set_trace
+    set_trace()
 
     # call test model
     #predictions = validate(args, model, test_loader)

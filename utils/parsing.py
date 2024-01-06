@@ -254,6 +254,9 @@ def parse_test_args() -> Namespace:
     for k, v in model_args.items():
         if k not in argkeys:
             setattr(args, k, v)
+    
+    if "vc_penalty" in args:
+        setattr(args, 'penalty', args.vc_penalty)
 
     if hasattr(args, 'valid_fraction'):
         setattr(args, 'train_fraction', 0.8)
