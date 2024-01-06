@@ -25,11 +25,14 @@ def load_mtx(path):
                 continue
 
             s = line.split()
-            g[0].append(int(s[0]) - 1, int(s[1]) - 1)
-            g[1].append(int(s[1]) - 1, int(s[0]) - 1)
+            g[0] += [int(s[0]) - 1, int(s[1]) - 1]
+            g[1] += [int(s[1]) - 1, int(s[0]) - 1]
             if len(s) > 2:
                 weights.append(int(s[2]))
                 weights.append(int(s[2]))
+
+    if len(weights) == 0:
+        weights = np.ones(len(g[0]))
 
     return g, weights
 
@@ -45,6 +48,7 @@ def load_gset(gset_path):
         if len(tokens) == 2 and 'mtx' in tokens[1]:
             counter += 1
             edge_index, edge_weight = load_mtx(gset_path+ '/'+file)
+            print("lengths", len(edge_index[0]), len(edge_weight))
             graphs_and_weights[tokens[0]] = [edge_index, edge_weight]
 
         for token in tokens:

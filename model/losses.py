@@ -100,6 +100,7 @@ def max_cut_score(args, X, example):
         X = X[:, None]
     N = example.num_nodes
     edge_index = example.edge_index.to(X.device)
+    E = edge_index.shape[1]
 
     X0 = X[example.edge_index[0]]
     X1 = X[example.edge_index[1]]

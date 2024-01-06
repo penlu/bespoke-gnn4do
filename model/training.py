@@ -28,6 +28,8 @@ def featurize_batch(args, batch):
         x_in = torch.cat((x_in, pe), 1)
     elif args.positional_encoding == 'random_walk':
         # XXX add the random walk PE here
+        print("edge index shape", batch.edge_index.shape)
+        print("edge weight shape", batch.edge_weight.shape)
         if not hasattr(batch, 'random_walk_pe'):
             batch = AddRandomWalkPE(walk_length=args.pe_dimension)(batch.to(args.device))
         x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
@@ -40,7 +42,10 @@ def featurize_batch(args, batch):
     edge_index = batch.edge_index.to(args.device)
 
     # TODO later, a more robust attribute system
-    edge_weight = batch.weights #torch.ones(num_edges, device=args.device)
+    if batch.edge_weight is not None:
+        edge_weight = batch.edge_weight
+    else:
+        edge_weight = torch.ones(num_edges, device=args.device)
     node_weight = torch.ones(N, device=args.device)
 
     return x_in, edge_index, edge_weight, node_weight
