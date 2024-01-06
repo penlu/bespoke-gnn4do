@@ -12,18 +12,19 @@ import re
 #function for reading the gset files
 def load_mtx(path):
     with open(path, 'r') as f:
-        g = nx.Graph()
+        g = [[], []]
         weights = []
         first_line = True
         for line in f:
             if not line[0] == '%':
                 s = line.split()
                 if first_line:
-                    g.add_nodes_from(range(int(s[0])))
                     first_line = False
                 else:
-                    g.add_edge(int(s[0]) - 1, int(s[1]) - 1)
+                    g[0].append(int(s[0]) - 1, int(s[1]) - 1)
+                    g[1].append(int(s[1]) - 1, int(s[0]) - 1)
                     if len(s) > 2:
+                        weights.append(int(s[2]))
                         weights.append(int(s[2]))
     if len(weights) < g.number_of_edges():
         weights = np.ones(g.number_of_edges())
