@@ -235,6 +235,8 @@ def parse_test_args() -> Namespace:
                         help='test output filename prefix')
     parser.add_argument('--use_val_set', type=bool, default=False,
                         help='use the validation set instead of the test set')
+    parser.add_argument('--problem_type', type=str, default="",
+                        help='test_problem_type')
     #add_general_args(parser)
     #add_dataset_args(parser)
     args = parser.parse_args()

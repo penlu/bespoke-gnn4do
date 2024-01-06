@@ -29,7 +29,7 @@ def construct_model(args):
         )
     elif args.model_type == 'FullMP':
         model = LiftProjectNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
@@ -39,7 +39,7 @@ def construct_model(args):
         # must have lift network to train.
         assert args.lift_file is not None
         model = LiftProjectNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
