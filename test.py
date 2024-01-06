@@ -12,18 +12,19 @@ from model.saving import load_model
 import pickle
 from datetime import datetime
 import numpy as np
-
-
-'''
-python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230924_hparam/paramhash:0a0656a369a5b8e4a4be27e0d04fb3b8c161e7b630caf99b8eaeedcddd6a2b18" \
-    --model_file=best_model.pt --test_prefix=240106_TEST
-
-Will load the dataset and parameters from the params in the model folder.
-'''
-from problem.losses import get_loss_fn, get_score_fn
 from problem.baselines import random_hyperplane_projector
 from model.training import featurize_batch
 import time
+from problem.problems import get_problem
+
+
+
+'''
+python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230928_runs/230925_generated_liftMP_cut/paramhash:5ec32a71d1ff22fe501f860a672a8357b01df6f08a3406ab1ae315f0ed36b69a/" \
+    --model_file=best_model.pt --test_prefix=240106_TEST --problem_type=max_cut
+
+Will load the dataset and parameters from the params in the model folder.
+'''
 
 
 def time_and_scores(args, model, test_loader, problem, stop_early=False):
