@@ -26,7 +26,7 @@ from model.training import featurize_batch
 import time
 
 
-def time_and_scores(args, model, test_loader, problem):
+def time_and_scores(args, model, test_loader, problem, stop_early=False):
     total_loss = 0.
     total_count = 0    
     times = []
@@ -61,6 +61,9 @@ def time_and_scores(args, model, test_loader, problem):
                 score = problem.score(args, x_proj, example)
                 scores.append( float(score.cpu().detach().numpy()))
                 total_count += 1
+
+            if stop_early:
+                return scores, times
                 
     return scores, times
 
@@ -75,7 +78,7 @@ if __name__ == '__main__':
     else:
         _, _, test_loader = construct_loaders(args)
     model, _ = construct_model(args)
-    criterion = get_loss_fn(args)
+    problem = get_problem(args)
 
     # load model
     model = load_model(model, os.path.join(args.model_folder, args.model_file))
@@ -83,8 +86,8 @@ if __name__ == '__main__':
 
     # call test model
     #predictions = validate(args, model, test_loader)
-    predictions = time_and_scores(args, model, test_loader, stop_early=True)
-    predictions = time_and_scores(args, model, test_loader)
+    predictions = time_and_scores(args, model, test_loader, problem, stop_early=True) # to initialize CUDA
+    predictions = time_and_scores(args, model, test_loader, problem)
     times, scores = predictions
     print(f'average score: {sum(scores) / len(scores)}')
 
