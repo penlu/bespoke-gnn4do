@@ -40,7 +40,7 @@ def featurize_batch(args, batch):
     edge_index = batch.edge_index.to(args.device)
 
     # TODO later, a more robust attribute system
-    edge_weight = torch.ones(num_edges, device=args.device)
+    edge_weight = batch.weights #torch.ones(num_edges, device=args.device)
     node_weight = torch.ones(N, device=args.device)
 
     return x_in, edge_index, edge_weight, node_weight

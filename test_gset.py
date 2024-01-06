@@ -46,6 +46,7 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
 
             start_time = time.time()
             x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
+            print("edge weight", edge_weight.shape)
             x_out = model(
               x=x_in,
               edge_index=edge_index,
@@ -53,7 +54,7 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
               node_weight=node_weight,
               vc_penalty=args.vc_penalty
             )
-            loss = loss_fn(x_out, edge_index)
+            loss = loss_fn(x_out, edge_index, edge_weight)
             total_loss += loss.cpu().detach().numpy()
 
             x_proj = random_hyperplane_projector(args, x_out, example, score_fn)

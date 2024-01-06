@@ -26,8 +26,9 @@ def load_mtx(path):
                     if len(s) > 2:
                         weights.append(int(s[2]))
     if len(weights) < g.number_of_edges():
-        weights = None
+        weights = np.ones(g.number_of_edges())
     else:
+        print("WEIGHTED", path)
         weights = np.int64(weights)
     return g, weights
 
@@ -73,11 +74,8 @@ def load_gset(gset_path):
     pyg_dataset = []
     for graph in graphs_and_weights.keys():
         pyg_graph = from_networkx(graphs_and_weights[graph][0])
-        if graphs_and_weights[graph][1] is None:
-            pyg_graph.weights = torch.ones(graphs_and_weights[graph][0].number_of_nodes(),graphs_and_weights[graph][0].number_of_nodes())
-        else:
-            pyg_graph.weights = torch.FloatTensor(graphs_and_weights[graph][1])
-            print(graphs_and_weights[graph][2])
+        pyg_graph.weights = torch.FloatTensor(graphs_and_weights[graph][1])
+        print(graphs_and_weights[graph][2])
         pyg_graph.optimal = torch.FloatTensor(int(graphs_and_weights[graph][2]))
         pyg_graph.name = graph
         pyg_dataset+=[pyg_graph]

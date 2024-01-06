@@ -96,9 +96,11 @@ class MaxCutGradLayer(MessagePassing):
 
     def forward(self, x, edge_index, **kwargs):
         edge_weight = kwargs['edge_weight']
+        print("edges", edge_index.shape)
         return self.propagate(edge_index, x=x, edge_weight=edge_weight)
 
     def message(self, x_j, edge_weight):
+        print("x_j shape", x_j.shape)
         return x_j * edge_weight[:, None]
 
     def update(self, aggr_out, x, edge_weight):

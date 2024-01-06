@@ -17,11 +17,12 @@ def get_loss_fn(args):
         return partial(max_clique_loss, penalty = args.vc_penalty)
 
 # X should have shape (N, r)
-def max_cut_loss(X, edge_index):
+def max_cut_loss(X, edge_index, edge_weight):
     # compute loss
-    A = to_torch_csr_tensor(edge_index, size=X.shape[0])
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
+    X0 = X[edge_index[0]]
+    X1 = X[edge_index[1]]
+    edges = torch.sum(X0 * X1, dim=1)
+    obj = torch.sum(edges * edge_weight) / 2
 
     return obj
 
@@ -99,10 +100,11 @@ def max_cut_score(args, X, example):
         X = X[:, None]
     N = example.num_nodes
     edge_index = example.edge_index.to(X.device)
-    A = to_torch_csr_tensor(edge_index, size=N)
-    E = edge_index.shape[1]
-    XX = torch.matmul(X, torch.transpose(X, 0, 1))
-    obj = torch.trace(torch.matmul(A, XX)) / 2.
+
+    X0 = X[example.edge_index[0]]
+    X1 = X[example.edge_index[1]]
+    edges = torch.sum(X0 * X1, dim=1)
+    obj = torch.sum(edges * example.edge_weight) / 2
 
     return (E - obj) / 2.
 
