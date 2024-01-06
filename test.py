@@ -16,7 +16,7 @@ import numpy as np
 
 '''
 python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230924_hparam/paramhash:0a0656a369a5b8e4a4be27e0d04fb3b8c161e7b630caf99b8eaeedcddd6a2b18" \
-    --model_file=best_model.pt --test_prefix=time_and_score
+    --model_file=best_model.pt --test_prefix=240106_TEST
 
 Will load the dataset and parameters from the params in the model folder.
 '''
@@ -26,32 +26,26 @@ from model.training import featurize_batch
 import time
 
 
-def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
-    loss_fn = get_loss_fn(args)
-    score_fn = get_score_fn(args)
-
+def time_and_scores(args, model, test_loader, problem):
     total_loss = 0.
-    total_score = 0.
-    total_count = 0
+    total_count = 0    
     times = []
     scores = []
     with torch.no_grad():
-        for batch in val_loader:
-            for example in batch.to_data_list():
+        for batch in test_loader:
+            if len(batch) == 1:
+                datalist = [batch]
+            else:
+                datalist = batch.to_data_list()
+            for example in datalist:
                 start_time = time.time()
-                assert False, "not adapted to new featurize_batch: proceed with caution!"
-                x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
-                x_out = model(
-                  x=x_in,
-                  edge_index=edge_index,
-                  edge_weight=edge_weight,
-                  node_weight=node_weight,
-                  vc_penalty=args.vc_penalty
-                )
-                loss = loss_fn(x_out, edge_index)
+                x_in, example = featurize_batch(args, example)
+                x_out = model(x_in, example)
+                loss = problem.loss(x_out, example)
+
                 total_loss += loss.cpu().detach().numpy()
 
-                x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
                 end_time = time.time()
 
                 # append times
@@ -64,14 +58,12 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
                 assert num_zeros == 0
 
                 # count the score
-                score = score_fn(args, x_proj, example)
+                score = problem.score(args, x_proj, example)
                 scores.append( float(score.cpu().detach().numpy()))
                 total_count += 1
+                
+    return scores, times
 
-                if stop_early:
-                    break
-
-    return times, scores
 
 if __name__ == '__main__':
     args = parse_test_args()
