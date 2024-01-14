@@ -90,6 +90,11 @@ class VertexCoverProblem(OptProblem):
 
     @staticmethod
     def constraint(X, batch):
+        if isinstance(X, np.ndarray):
+            X = torch.FloatTensor(X)
+        if len(X.shape) == 1:
+            X = X[:, None]
+
         return vertex_cover_constraint(X, batch)
 
     @staticmethod
@@ -142,6 +147,8 @@ class SATProblem(OptProblem):
             X = torch.FloatTensor(X)
         if len(X.shape) == 1:
             X = X[:, None]
+
+        # TODO recompute pair variables so the rounding is reasonable
 
         objective = sdp_objective(X, example)
         constraint = sdp_constraint(X, example)

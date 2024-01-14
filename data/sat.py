@@ -47,6 +47,9 @@ class SDPCompiler():
         C3 = torch.LongTensor(list(self.constraints3))
         C4 = torch.LongTensor(list(self.constraints4))
 
+        # TODO mask_index - which variables are pairs (to be eliminated in rounding)
+        # TODO pair_indices - how to recompute pairs from singles
+
         return A0, A1i, A1w, A2i, A2w, C3, C4
 
 def sdp_objective(X, batch):
