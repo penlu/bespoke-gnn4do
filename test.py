@@ -38,13 +38,13 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
                 datalist = [batch]
             else:
                 datalist = batch.to_data_list()
-            for example in datalist:
+            for i, example in enumerate(datalist):
                 start_time = time.time()
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
                 loss = problem.loss(x_out, example)
 
-                total_loss += loss.cpu().detach().numpy()
+                total_loss += float(loss)
 
                 x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
                 end_time = time.time()
@@ -60,12 +60,12 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
 
                 # count the score
                 score = problem.score(args, x_proj, example)
-                scores.append( float(score.cpu().detach().numpy()))
+                scores.append(float(score))
                 total_count += 1
 
             if stop_early:
                 return scores, times
-                
+
     return scores, times
 
 
@@ -84,14 +84,11 @@ if __name__ == '__main__':
     # load model
     model = load_model(model, os.path.join(args.model_folder, args.model_file))
     model.to(args.device)
-    from pdb import set_trace
-    set_trace()
 
     # call test model
-    #predictions = validate(args, model, test_loader)
     predictions = time_and_scores(args, model, test_loader, problem, stop_early=True) # to initialize CUDA
     predictions = time_and_scores(args, model, test_loader, problem)
-    times, scores = predictions
+    scores, times = predictions
     print(f'average score: {sum(scores) / len(scores)}')
 
     # TODO: fix output file?

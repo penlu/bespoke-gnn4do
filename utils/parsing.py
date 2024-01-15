@@ -240,7 +240,6 @@ def parse_test_args() -> Namespace:
     #add_general_args(parser)
     #add_dataset_args(parser)
     args = parser.parse_args()
-    check_args(args)
 
     # read params from model folder.
     model_args = read_params_from_folder(args.model_folder)
@@ -260,6 +259,8 @@ def parse_test_args() -> Namespace:
 
     if hasattr(args, 'valid_fraction'):
         setattr(args, 'train_fraction', 0.8)
+
+    check_args(args)
 
     return args
 
