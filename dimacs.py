@@ -43,6 +43,6 @@ if __name__ == '__main__':
         train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size], generator=generator)
 
     for i, data in enumerate(test_set):
-        dimacs = dimacs_printer(data.N, data.K, data.clauses, data.signs)
-        with open(os.path.join(args.log_dir, f'dimacs_{i}_{data.N}_{data.K}.txt'), 'w') as f:
+        dimacs = dimacs_printer(data.num_vars, data.num_clauses, data.clause_index, data.signs)
+        with open(os.path.join(args.log_dir, f'dimacs_{i}_{data.num_vars}_{data.num_clauses}.txt'), 'w') as f:
             f.write(dimacs)

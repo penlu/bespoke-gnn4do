@@ -63,12 +63,13 @@ def validate(args, model, val_loader, problem):
                 datalist = [batch]
             else:
                 datalist = batch.to_data_list()
+            # TODO re-batch this
             for example in datalist:
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)
                 loss = problem.loss(x_out, example)
 
-                total_loss += loss.cpu().detach().numpy()
+                total_loss += float(loss)
 
                 x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
 
@@ -80,8 +81,8 @@ def validate(args, model, val_loader, problem):
 
                 # count the score
                 score = problem.score(args, x_proj, example)
-                total_score += score.cpu().detach().numpy()
-                total_constraint += problem.constraint(x_proj, example).cpu().detach().numpy()
+                total_score += float(score)
+                total_constraint += float(problem.constraint(x_proj, example))
 
                 total_count += 1
 
