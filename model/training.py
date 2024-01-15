@@ -63,6 +63,7 @@ def validate(args, model, val_loader, problem):
                 datalist = [batch]
             else:
                 datalist = batch.to_data_list()
+            # TODO re-batch this
             for example in datalist:
                 x_in, example = featurize_batch(args, example)
                 x_out = model(x_in, example)

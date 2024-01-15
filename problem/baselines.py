@@ -129,7 +129,7 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
         x_lift = torch.FloatTensor(x_lift)
 
     n_hyperplanes = 1000 # TODO make this modifiable in args
-    n_groups = 10 # we do it in groups to reduce memory consumption
+    n_groups = 1 # we do it in groups to reduce memory consumption
     x_int = []
     scores = []
     for i in range(n_groups):

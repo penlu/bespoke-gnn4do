@@ -132,6 +132,9 @@ class SATProblem(OptProblem):
         if len(X.shape) == 1:
             X = X[:, None]
 
+        pair_index = batch.pair_index
+        X[pair_index[0]] = X[pair_index[1]] * X[pair_index[2]]
+
         return sdp_constraint(X, batch)
 
     @staticmethod
@@ -148,7 +151,9 @@ class SATProblem(OptProblem):
         if len(X.shape) == 1:
             X = X[:, None]
 
-        # TODO recompute pair variables so the rounding is reasonable
+        # recompute pair variables from singles, to avoid constraint violation
+        pair_index = example.pair_index
+        X[pair_index[0]] = X[pair_index[1]] * X[pair_index[2]]
 
         objective = sdp_objective(X, example)
         constraint = sdp_constraint(X, example)

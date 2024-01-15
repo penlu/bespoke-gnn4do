@@ -6,7 +6,8 @@ from torch_geometric.utils import to_edge_index
 from torch_geometric.data import Data, Batch
 
 class SDPCompiler():
-    def __init__(self):
+    def __init__(self, N):
+        self.N = N
         self.constant = 0.
         self.linear = {}
         self.quadratic = {}
@@ -20,7 +21,8 @@ class SDPCompiler():
         self.linear[i] = self.linear.get(i, 0.) + v
 
     def add_quadratic(self, i, j, v):
-        self.quadratic[(i, j)] = self.quadratic.get((i, j), 0.) + v
+        self.quadratic[(i, j)] = self.quadratic.get((i, j), 0.) + v / 2.
+        self.quadratic[(j, i)] = self.quadratic.get((j, i), 0.) + v / 2.
 
     # only supporting constraints of form <e1, i> = <j, k>
     def add_constraint3(self, i, j, k):
@@ -47,10 +49,15 @@ class SDPCompiler():
         C3 = torch.LongTensor(list(self.constraints3))
         C4 = torch.LongTensor(list(self.constraints4))
 
-        # TODO mask_index - which variables are pairs (to be eliminated in rounding)
-        # TODO pair_indices - how to recompute pairs from singles
-
-        return A0, A1i, A1w, A2i, A2w, C3, C4
+        return Data(
+            num_nodes=self.N,
+            bias_index=A1i,
+            bias_weight=A1w,
+            edge_index=A2i.t(),
+            edge_weight=A2w,
+            C3_index=C3.t(),
+            C4_index=C4.t(),
+            A0=A0)
 
 def sdp_objective(X, batch):
     # constant term
@@ -151,7 +158,7 @@ def compile_sat(clauses, signs, N, K):
     # compile the SAT problem to A and C sparse tensors
     As = [] # list of weight matrices
     Cs = [] # list of constraint matrices
-    compiler = SDPCompiler()
+    compiler = SDPCompiler(total_vars)
     for f in range(K):
         i = int(clauses[f, 0])
         j = int(clauses[f, 1])
@@ -203,24 +210,18 @@ def compile_sat(clauses, signs, N, K):
         add_quad_constraint(compiler, pair_to_index, i, k, j)
         add_quad_constraint(compiler, pair_to_index, j, i, k)
 
-    A0, A1i, A1w, A2i, A2w, C3, C4 = compiler.compile()
+    data = compiler.compile()
 
-    return total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4
+    # how to recompute pairs from singles
+    pair_index = [[], [], []]
+    for index, i in pair_to_index.items():
+        pair_index[0].append(i)
+        pair_index[1].append(index[0])
+        pair_index[2].append(index[1])
+    pair_index = torch.LongTensor(pair_index)
+    data.pair_index = pair_index
 
-def sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4):
-    return Data(
-        num_nodes=total_vars,
-        bias_index=A1i,
-        bias_weight=A1w,
-        edge_index=A2i.t(),
-        edge_weight=A2w,
-        C3_index=C3.t(),
-        C4_index=C4.t(),
-        A0=A0)
-
-        # including these would require custom batching rules!
-        #clauses=clauses, signs=signs,
-        #N=N, K=K, pair_to_index=pair_to_index
+    return total_vars, pair_to_index, data
 
 def print_sat_data(d):
     print(f"total_vars={d.num_nodes}\nbias_index={d.bias_index}\nbias_weight={d.bias_weight}\nedge_index={d.edge_index}\nedge_weight={d.edge_weight}\nC3_index={d.C3_index}\nC4_index={d.C4_index}")
@@ -241,9 +242,9 @@ def random_3sat_generator(seed, n=100, K=400, p=0.5):
     while True:
         # generate A and C for a random 3-SAT instance
         clauses, signs = random_3sat_clauses(random_state, N, K, p)
-        total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
+        total_vars, pair_to_index, data = compile_sat(clauses, signs, N, K)
 
-        yield sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4)
+        yield data
 
 # count number of satisfied clauses
 def count_sat_clauses(X, clauses, signs):
