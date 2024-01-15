@@ -221,6 +221,11 @@ def compile_sat(clauses, signs, N, K):
     pair_index = torch.LongTensor(pair_index)
     data.pair_index = pair_index
 
+    data.num_vars = N
+    data.num_clauses = K
+    data.clause_index = clauses
+    data.signs = signs
+
     return total_vars, pair_to_index, data
 
 def print_sat_data(d):
@@ -267,8 +272,7 @@ def count_sat_clauses(X, clauses, signs):
 # TODO get average scores for a random assignment
 def run_equivalence_test(clauses, signs, X):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    total_vars, pair_to_index, A0, A1i, A1w, A2i, A2w, C3, C4 = compile_sat(clauses, signs, N, K)
-    data = sat_to_data(total_vars, A0, A1i, A1w, A2i, A2w, C3, C4)
+    total_vars, pair_to_index, data = compile_sat(clauses, signs, N, K)
     data = data.to(device)
 
     # extend random assignment into ij domain
