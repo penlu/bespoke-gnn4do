@@ -60,7 +60,7 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
 
                 # count the score
                 score = problem.score(args, x_proj, example)
-                print(score, example.name, example.optimal)
+                print(example.name, score / (example.optimal[0] * 2))
                 scores.append(float(score))
                 total_count += 1
 

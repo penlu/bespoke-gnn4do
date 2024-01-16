@@ -20,7 +20,6 @@ class ListDataset(Dataset):
         if self.transform is not None:
             return self.transform(self.data[index])
         else:
-            print(self.data[index])
             return self.data[index]
 
     def __len__(self):

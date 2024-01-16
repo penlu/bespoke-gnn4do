@@ -14,8 +14,7 @@ def max_cut_obj(X, batch):
     X0 = X[batch.edge_index[0]]
     X1 = X[batch.edge_index[1]]
     edges = torch.sum(X0 * X1, dim=1)
-    obj = torch.sum(edges * batch.edge_weight) / 2
-
+    obj = torch.sum(edges * batch.edge_weight)
     return obj
 
 def vertex_cover_obj(X, batch):

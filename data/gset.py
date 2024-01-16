@@ -5,7 +5,7 @@ from os.path import isfile, join
 import networkx as nx
 import numpy as np
 import torch_geometric
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx, coalesce
 from torch_geometric.data import Data, Batch
 import torch
 import re
@@ -70,21 +70,26 @@ def load_gset(gset_path):
                         parts = re.split('\n | \t', chunk)
 
     best_known_gs = {}
-    for g,opt in zip(gs,optimal_values):
-        best_known_gs[g]=opt
+    for g, opt in zip(gs, optimal_values):
+        best_known_gs[g] = opt
 
     for g in graphs_and_weights.keys():
-        graphs_and_weights[g]+=[best_known_gs[g]]
+        graphs_and_weights[g] += [best_known_gs[g]]
 
     # at this point, graphs_and_weights is a dict from names (e.g. "G14") to:
     # a tuple of [edge_index, edge_weight], and possibly a third item representing optimal score
 
     pyg_dataset = []
     for graph in graphs_and_weights.keys():
+        edge_index=torch.LongTensor(graphs_and_weights[graph][0])
+        edge_weight=torch.FloatTensor(graphs_and_weights[graph][1])
+
+        edge_index, edge_weight = coalesce(edge_index, edge_weight)
+
         pyg_graph = Data(
-            edge_index=torch.LongTensor(graphs_and_weights[graph][0]),
-            edge_weight=torch.FloatTensor(graphs_and_weights[graph][1]),
-            optimal=torch.FloatTensor(int(graphs_and_weights[graph][2])),
+            edge_index=edge_index,
+            edge_weight=edge_weight,
+            optimal=int(graphs_and_weights[graph][2]),
             name=graph)
         pyg_dataset += [pyg_graph]
 
