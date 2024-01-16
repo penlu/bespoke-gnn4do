@@ -16,29 +16,20 @@ from torch_geometric.nn.conv import GatedGraphConv
 
 from model.more_models import NegationGAT
 from model.saving import load_model
-from model.parsing import read_params_from_folder
-
-def construct_grad_layer(args):
-    if args.problem_type == 'max_cut':
-        return MaxCutGradLayer()
-    elif args.problem_type == 'vertex_cover':
-        return VertexCoverGradLayer()
-    elif args.problem_type == 'max_clique':
-        return VertexCoverGradLayer() # we do clique by complement
-    else:
-        raise ValueError(f"construct_grad_layer got unsupported problem_type {problem_type}")
+from utils.parsing import read_params_from_folder
+from problem.problems import get_problem
 
 def construct_model(args):
     if args.model_type == 'LiftMP':
         model = LiftNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers=args.num_layers,
           repeat_lift_layers=args.repeat_lift_layers,
         )
     elif args.model_type == 'FullMP':
         model = LiftProjectNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
@@ -48,7 +39,7 @@ def construct_model(args):
         # must have lift network to train.
         assert args.lift_file is not None
         model = LiftProjectNetwork(
-          grad_layer=construct_grad_layer(args),
+          grad_layer=AutogradLayer(loss_fn=get_problem(args).loss),
           in_channels=args.rank,
           num_layers_lift=args.num_layers - args.num_layers_project,
           num_layers_project=args.num_layers_project,
@@ -89,47 +80,20 @@ def construct_model(args):
 
     return model, opt
 
-# This network concatenates the neighborhood gradient to each vector in its input.
-class MaxCutGradLayer(MessagePassing):
-    def __init__(self):
-        super().__init__(aggr='add')
+# use autograd on a given loss function to compute gradients
+class AutogradLayer(torch.nn.Module):
+    def __init__(self, loss_fn):
+        super().__init__()
+        self._loss_fn = loss_fn
 
-    def forward(self, x, edge_index, **kwargs):
-        edge_weight = kwargs['edge_weight']
-        print("edges", edge_index.shape)
-        return self.propagate(edge_index, x=x, edge_weight=edge_weight)
-
-    def message(self, x_j, edge_weight):
-        print("x_j shape", x_j.shape)
-        return x_j * edge_weight[:, None]
-
-    def update(self, aggr_out, x, edge_weight):
-        return aggr_out
-
-class VertexCoverGradLayer(MessagePassing):
-    def __init__(self):
-        super().__init__(aggr='add')
-
-    def forward(self, x, edge_index, **kwargs):
-        node_weight = kwargs['node_weight']
-        vc_penalty = kwargs['vc_penalty']
-        return self.propagate(edge_index, x=x, node_weight=node_weight, vc_penalty=vc_penalty)
-
-    def message(self, x_i, x_j, node_weight, vc_penalty):
-        e1 = torch.zeros_like(x_j) # (num_edges, hidden)
-        e1[:, 0] = 1
-        # take (e1 - x_i)[e] . (e1 - x_j)[e] for each row e
-        phi = torch.sum((e1 - x_i) * (e1 - x_j), dim=1)[:, None] # (num_edges, 1)
-        scaling = vc_penalty * phi
-        return (-e1 + x_j) * scaling # (num_edges, hidden)
-
-    def update(self, aggr_out, x, node_weight, vc_penalty):
-        # aggr_out is the sum of gradients from constraints coming from neighbors
-        e1 = torch.zeros_like(aggr_out) # (num_edges, hidden)
-        e1[:, 0] = 1
-        # add e1 for gradient of x_i and take negative for descent direction
-        grad = -(aggr_out + 0.5 * e1 * node_weight.view(-1, 1))
-        return grad
+    def forward(self, x, batch):
+        # calculate the lift loss and take the gradient w.r.t. the input x
+        # the result is expected to be autodiffable, and training should be unaffected
+        with torch.enable_grad():
+            x.requires_grad_(True)
+            loss = self._loss_fn(x, batch)
+            grad = torch.autograd.grad(loss, x, create_graph=True)[0]
+            return grad
 
 class LiftLayer(torch.nn.Module):
     def __init__(self, grad_layer, in_channels):
@@ -137,8 +101,8 @@ class LiftLayer(torch.nn.Module):
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
 
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         norm_grads = F.normalize(grads, dim=1)
         out = torch.cat((x, norm_grads), 1)
         out = self.lin(out)
@@ -159,10 +123,10 @@ class LiftNetwork(torch.nn.Module):
             repeat_lift_layers = [1 for _ in range(num_layers)]
         self.repeat_lift_layers = repeat_lift_layers
 
-    def forward(self, x, edge_index, **kwargs):
+    def forward(self, x, batch):
         for l, repeat_l in zip(self.layers, self.repeat_lift_layers):
             for _ in range(repeat_l):
-                x = l(x, edge_index, **kwargs)
+                x = l(x, batch)
         return x
 
 # Nearly identical to the lift layer. The big difference is that we no longer normalize in update.
@@ -172,8 +136,8 @@ class ProjectLayer(torch.nn.Module):
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
 
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         out = torch.cat((x, grads), 1)
         out = self.lin(out)
         out = F.tanh(out)
@@ -186,9 +150,9 @@ class ProjectNetwork(torch.nn.Module):
         for i, layer in enumerate(self.layers):
             self.add_module(f"layer_{i}", layer)
 
-    def forward(self, x, edge_index, **kwargs):
+    def forward(self, x, batch):
         for l in self.layers:
-            x = l(x, edge_index, **kwargs)
+            x = l(x, batch)
         return x
 
 class LiftProjectNetwork(torch.nn.Module):
@@ -221,10 +185,10 @@ class LiftProjectNetwork(torch.nn.Module):
             self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift, repeat_lift_layers=repeat_lift_layers)
         self.project_net = ProjectNetwork(grad_layer, in_channels, num_layers=num_layers_project)
 
-    def forward(self, x, edge_index, edge_weight):
-        out = self.lift_net(x, edge_index, edge_weight)
+    def forward(self, x, batch):
+        out = self.lift_net(x, batch)
         # TODO randomly rotate here
-        out = self.project_net(out, edge_index, edge_weight)
+        out = self.project_net(out, batch)
         return out
 
 # graph isomorphism network
@@ -238,8 +202,8 @@ class GINLiftNetwork(torch.nn.Module):
             norm=args.norm,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -256,8 +220,8 @@ class GATLiftNetwork(torch.nn.Module):
             num_layers=args.num_layers,
             heads=args.heads)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -272,8 +236,8 @@ class GCNLiftNetwork(torch.nn.Module):
             norm=args.norm,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -286,8 +250,8 @@ class GatedGCNLiftNetwork(torch.nn.Module):
         self.net = GatedGraphConv(out_channels=args.hidden_channels,
             num_layers=args.num_layers)
 
-    def forward(self, x, edge_index, **kwargs):
-        out = self.net(x=x, edge_index=edge_index)
+    def forward(self, x, batch):
+        out = self.net(x=x, edge_index=batch.edge_index)
         out = F.normalize(out, dim=1)
         return out
 
@@ -296,12 +260,14 @@ class LiftLayerv2(torch.nn.Module):
         super().__init__()
         self.grad_layer = grad_layer
         self.lin = Linear(2*in_channels, in_channels)
-    def forward(self, x, edge_index, **kwargs):
-        grads = self.grad_layer(x, edge_index, **kwargs)
+
+    def forward(self, x, batch):
+        grads = self.grad_layer(x, batch)
         out = torch.cat((x, grads), 1)
         out = self.lin(out)
         out = F.normalize(out, dim=1)
         return out
+
 class ProjectNetwork_r1(torch.nn.Module):
     def __init__(self, grad_layer, in_channels, num_layers=6):
         super().__init__()
@@ -309,9 +275,10 @@ class ProjectNetwork_r1(torch.nn.Module):
         for i, layer in enumerate(self.layers):
             self.add_module(f"layer_{i}", layer)
         self.lin = Linear(in_channels, 1)
-    def forward(self, x, edge_index, **kwargs):
+
+    def forward(self, x, batch):
         for l in self.layers:
-            x = F.leaky_relu(l(x, edge_index, **kwargs)+x,0.01)
+            x = F.leaky_relu(l(x, batch)+x,0.01)
         x = F.normalize(x)
         return x
 
@@ -320,7 +287,8 @@ class LiftProjectNetwork_Nikos(torch.nn.Module):
         super().__init__()
         self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift)
         self.project_net = ProjectNetwork_r1(grad_layer, in_channels, num_layers=num_layers_project)
-    def forward(self, x, edge_index, **kwargs):
-        out = self.lift_net(x, edge_index, **kwargs)
-        outs = self.project_net(out, edge_index, **kwargs)
+
+    def forward(self, x, batch):
+        out = self.lift_net(x, batch)
+        outs = self.project_net(out, batch)
         return outs

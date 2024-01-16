@@ -26,7 +26,7 @@ def required_length(nmin, nmax):
 def add_general_args(parser: ArgumentParser):
     # General arguments
     parser.add_argument('--problem_type', type=str, default='max_cut',
-        choices=['max_cut', 'vertex_cover', 'max_clique'],
+        choices=['max_cut', 'vertex_cover', 'max_clique', 'sat'],
         help='What problem are we doing?',
     )
     parser.add_argument('--seed', type=str, default=0,
@@ -51,6 +51,8 @@ def add_dataset_args(parser: ArgumentParser):
                             'REDDIT-MULTI-5K',
                             'REDDIT-MULTI-12K',
                             'REDDIT-BINARY',
+                            'random-sat',
+                            'kamis', 'gset',
                         ],
                         help='Dataset type to use')
 
@@ -133,8 +135,8 @@ def add_train_args(parser: ArgumentParser):
                         help='Run validation every N steps/epochs (0 to never run validation)')
     parser.add_argument('--save_freq', type=int, default=1000,
                         help='Save model every N steps/epochs (0 to only save at end of training)')
-    parser.add_argument('--vc_penalty', type=float, default=None,
-                        help='Penalty for missed edges in vertex cover')
+    parser.add_argument('--penalty', type=float, default=1.,
+                        help='Penalty for constraint violations')
 
     parser.add_argument('--stepwise', type=bool, default=True,
                         help='Train by number of gradient steps or number of epochs?')
@@ -154,6 +156,14 @@ def hash_dict(d):
     # Hash the tuple
     hash_value = hashlib.sha256(sorted_items.encode()).hexdigest()
     return hash_value
+
+def check_args(args: Namespace):
+    if args.problem_type == 'sat':
+        if args.dataset != 'random-sat':
+            raise ValueError(f'dataset = {args.dataset} not valid for problem_type = {args.problem_type}')
+        #if args.batch_size != 1:
+        #    raise ValueError(f'batch_size != 1 not valid for problem_type = {args.problem_type}')
+    return
 
 def modify_train_args(args: Namespace):
     """
@@ -206,10 +216,7 @@ def parse_train_args() -> Namespace:
     add_dataset_args(parser)
     args = parser.parse_args()
     modify_train_args(args)
-
-    # TODO: checks in a separate function?
-    if args.vc_penalty is not None and args.problem_type == 'max_cut':
-        raise ValueError(f"vc_penalty set for max cut")
+    check_args(args)
 
     return args
 
@@ -220,7 +227,7 @@ def read_params_from_folder(model_folder):
     return model_args
 
 def parse_test_args() -> Namespace:
-    parser = ArgumentParser()
+    parser = ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument('--model_folder', type=str, default=None,
                         help='folder to look in.')
     parser.add_argument('--model_file', type=str, default=None,
@@ -229,16 +236,16 @@ def parse_test_args() -> Namespace:
                         help='test output filename prefix')
     parser.add_argument('--use_val_set', type=bool, default=False,
                         help='use the validation set instead of the test set')
-    #add_general_args(parser)
-    #add_dataset_args(parser)
+    parser.add_argument('--problem_type', type=str, default="",
+                        help='test_problem_type')
+    add_dataset_args(parser)
     args = parser.parse_args()
 
     # read params from model folder.
     model_args = read_params_from_folder(args.model_folder)
 
     # set device
-    model_args[ "device"] =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    model_args["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # get relevant keys
     argkeys = vars(args).keys()
@@ -246,9 +253,14 @@ def parse_test_args() -> Namespace:
     for k, v in model_args.items():
         if k not in argkeys:
             setattr(args, k, v)
+    
+    if "vc_penalty" in args:
+        setattr(args, 'penalty', args.vc_penalty)
 
     if hasattr(args, 'valid_fraction'):
         setattr(args, 'train_fraction', 0.8)
+
+    check_args(args)
 
     return args
 

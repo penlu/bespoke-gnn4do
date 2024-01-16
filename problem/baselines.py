@@ -127,13 +127,9 @@ def e1_projector(args, x_lift, example, score_fn):
 def random_hyperplane_projector(args, x_lift, example, score_fn):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
-    N = example.num_nodes
-    edge_index = example.edge_index.to(x_lift.device)
-    E = edge_index.shape[1]
-    A = to_dense_adj(edge_index, max_num_nodes=N)[0]
 
     n_hyperplanes = 1000 # TODO make this modifiable in args
-    n_groups = 10 # we do it in groups to reduce memory consumption
+    n_groups = 1 # we do it in groups to reduce memory consumption
     x_int = []
     scores = []
     for i in range(n_groups):

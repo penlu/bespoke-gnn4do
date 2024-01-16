@@ -6,15 +6,17 @@ import torch
 import torch.nn.functional as F
 
 from model.saving import save_model
-from model.losses import get_loss_fn, get_score_fn
-from utils.baselines import random_hyperplane_projector
+from problem.baselines import random_hyperplane_projector
 
 from torch_geometric.transforms import AddRandomWalkPE
 
 def featurize_batch(args, batch):
+    batch = batch.to(args.device)
+
     N = batch.num_nodes
     num_edges = batch.edge_index.shape[1]
 
+    # build x
     if args.positional_encoding is None or args.pe_dimension == 0:
         # generate random vector input
         x_in = torch.randn((N, args.rank), dtype=torch.float, device=args.device)
@@ -39,40 +41,39 @@ def featurize_batch(args, batch):
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
 
-    edge_index = batch.edge_index.to(args.device)
+    # attach some weights if they're not already present
+    if not hasattr(batch, 'edge_weight') or batch.edge_weight is None:
+        batch.edge_weight = torch.ones(num_edges, device=args.device)
 
-    # TODO later, a more robust attribute system
-    if batch.edge_weight is not None:
-        edge_weight = batch.edge_weight
-    else:
-        edge_weight = torch.ones(num_edges, device=args.device)
-    node_weight = torch.ones(N, device=args.device)
+    if not hasattr(batch, 'node_weight') or batch.node_weight is None:
+        batch.node_weight = torch.ones(N, device=args.device)
 
-    return x_in, edge_index, edge_weight, node_weight
+    # TODO handling multi-penalty situations -- shouldn't be in featurize
+    batch.penalty = args.penalty
+
+    return x_in, batch
 
 # measure and return the validation loss
-def validate(args, model, val_loader, criterion=None):
-    loss_fn = get_loss_fn(args)
-    score_fn = get_score_fn(args)
-
+def validate(args, model, val_loader, problem):
     total_loss = 0.
     total_score = 0.
+    total_constraint = 0.
     total_count = 0
     with torch.no_grad():
         for batch in val_loader:
-            for example in batch.to_data_list():
-                x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
-                x_out = model(
-                  x=x_in,
-                  edge_index=edge_index,
-                  edge_weight=edge_weight,
-                  node_weight=node_weight,
-                  vc_penalty=args.vc_penalty
-                )
-                loss = loss_fn(x_out, edge_index)
-                total_loss += loss.cpu().detach().numpy()
+            if len(batch) == 1:
+                datalist = [batch]
+            else:
+                datalist = batch.to_data_list()
+            # TODO re-batch this
+            for example in datalist:
+                x_in, example = featurize_batch(args, example)
+                x_out = model(x_in, example)
+                loss = problem.loss(x_out, example)
 
-                x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                total_loss += float(loss)
+
+                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
 
                 # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
                 x_proj = torch.where(x_proj == 0, 1, x_proj)
@@ -81,14 +82,15 @@ def validate(args, model, val_loader, criterion=None):
                 assert num_zeros == 0
 
                 # count the score
-                score = score_fn(args, x_proj, example)
-                total_score += score.cpu().detach().numpy()
+                score = problem.score(args, x_proj, example)
+                total_score += float(score)
+                total_constraint += float(problem.constraint(x_proj, example))
 
                 total_count += 1
 
-    return total_loss / total_count, total_score / total_count
+    return total_loss / total_count, total_score / total_count, total_constraint / total_count
 
-def train(args, model, train_loader, optimizer, criterion, val_loader=None, test_loader=None):
+def train(args, model, train_loader, optimizer, problem, val_loader=None, test_loader=None):
     '''Main training loop:
 
     Trains a model with an optimizer for a number of epochs
@@ -99,8 +101,10 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
     train_losses = []
     valid_losses = []
     valid_scores = []
+    valid_constraints = []
     test_losses = []
     test_scores = []
+    test_constraints = []
 
     model.to(args.device)
 
@@ -116,16 +120,11 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
 
         for batch in train_loader:
             # run the model
-            x_in, edge_index, edge_weight, node_weight = featurize_batch(args, batch)
-            x_out = model(x=x_in,
-              edge_index=edge_index,
-              edge_weight=edge_weight,
-              node_weight=node_weight,
-              vc_penalty=args.vc_penalty
-            )
+            x_in, batch = featurize_batch(args, batch)
+            x_out = model(x_in, batch)
 
-            # get objective
-            loss = criterion(x_out, edge_index)
+            # get loss
+            loss = problem.loss(x_out, batch)
 
             # run gradient descent step
             optimizer.zero_grad()
@@ -135,7 +134,6 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             # calculate and store average loss for batch
             avg_loss = loss.cpu().detach().numpy() / batch.num_graphs
             train_losses.append(avg_loss)
-            #print(f"avg_loss={avg_loss:0.2f}")
 
             # increment epoch loss counters
             epoch_total_loss += loss.cpu().detach().numpy()
@@ -156,26 +154,28 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
                 # occasionally run validation
                 if args.valid_freq != 0 and steps % args.valid_freq == 0:
                     valid_start_time = time.time()
-                    valid_loss, valid_score = validate(args, model, val_loader)
+                    valid_loss, valid_score, valid_constraint = validate(args, model, val_loader, problem)
                     # save model if it's the current best
                     if len(valid_scores)==0 or valid_score > max(valid_scores):
                         save_model(model, f"{model_folder}/best_model.pt")
                     valid_losses.append(valid_loss)
                     valid_scores.append(valid_score)
+                    valid_constraints.append(valid_constraint)
                     valid_time = time.time() - valid_start_time
                     
                     # test
                     if test_loader is not None:
-                        test_loss, test_score = validate(args, model, test_loader)
+                        test_loss, test_score, test_constraint = validate(args, model, test_loader, problem)
                         test_losses.append(test_loss)
                         test_scores.append(test_score)
+                        test_constraints.append(test_constraint)
                     else:
                         test_loss = np.inf
                         test_score = -np.inf
 
-                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f} \n\
-                                valid_loss={valid_loss} valid_score={valid_score} \n\
-                                test_loss={test_loss} test_score={test_score}")
+                    print(f"  VALIDATION epoch={ep} steps={steps} t={valid_time:0.2f}\n\
+                                valid_loss={valid_loss} valid_score={valid_score} valid_constraint={valid_constraint}\n\
+                                test_loss={test_loss} test_score={test_score} test_constraint={test_constraint}")
 
                 # check if training is done
                 if steps >= args.steps:
@@ -197,7 +197,7 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
             # occasionally run validation
             if args.valid_freq != 0 and ep % args.valid_freq == 0:
                 valid_start_time = time.time()
-                valid_loss, valid_score = validate(args, model, val_loader)
+                valid_loss, valid_score = validate(args, model, val_loader, problem)
                 valid_losses.append(valid_loss)
                 valid_scores.append(valid_score)
                 valid_time = time.time() - valid_start_time
@@ -218,14 +218,17 @@ def train(args, model, train_loader, optimizer, criterion, val_loader=None, test
     np.save(os.path.join(args.log_dir, "train_losses.npy"), train_losses)
     np.save(os.path.join(args.log_dir, "valid_losses.npy"), valid_losses)
     np.save(os.path.join(args.log_dir, "valid_scores.npy"), valid_scores)
+    np.save(os.path.join(args.log_dir, "valid_constraints.npy"), valid_constraints)
     np.save(os.path.join(args.log_dir, "test_losses.npy"), test_losses)
     np.save(os.path.join(args.log_dir, "test_scores.npy"), test_scores)
+    np.save(os.path.join(args.log_dir, "test_constraints.npy"), test_constraints)
 
 
 def predict(model, loader, args):
     batches = []
     # TODO decide return signature and transform.
     for batch in loader:
+        assert False, "not adapted to new featurize_batch: proceed with caution!"
         x_in, edge_index, edge_weight = featurize_batch(args, batch)
         x_out = model(x_in, edge_index, edge_weight)
         batches.append((x_out, edge_index))

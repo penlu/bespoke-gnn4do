@@ -2,56 +2,51 @@
 # loads model and runs it on data. 
 
 import torch
-from model.parsing import parse_test_args
+from utils.parsing import parse_test_args
 import json
 import os
-from data.loader import construct_loaders
+from data.loader import construct_loaders, test_datasets
 from model.training import validate
 from model.models import construct_model
-from model.losses import get_loss_fn
 from model.saving import load_model
 import pickle
 from datetime import datetime
 import numpy as np
+from problem.baselines import random_hyperplane_projector
+from model.training import featurize_batch
+import time
+from problem.problems import get_problem
 
+from data.gset import load_gset
 
 '''
-python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230924_hparam/paramhash:0a0656a369a5b8e4a4be27e0d04fb3b8c161e7b630caf99b8eaeedcddd6a2b18" \
-    --model_file=best_model.pt --test_prefix=time_and_score
+python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230928_runs/230925_generated_liftMP_cut/paramhash:5ec32a71d1ff22fe501f860a672a8357b01df6f08a3406ab1ae315f0ed36b69a/" \
+    --model_file=best_model.pt --test_prefix=240106_TEST --problem_type=max_cut
 
 Will load the dataset and parameters from the params in the model folder.
 '''
-from model.losses import get_loss_fn, get_score_fn
-from utils.baselines import random_hyperplane_projector
-from model.training import featurize_batch
-import time
 
 
-def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
-    loss_fn = get_loss_fn(args)
-    score_fn = get_score_fn(args)
-
+def time_and_scores(args, model, test_loader, problem, stop_early=False):
     total_loss = 0.
-    total_score = 0.
-    total_count = 0
+    total_count = 0    
     times = []
     scores = []
     with torch.no_grad():
-        for batch in val_loader:
-            for example in batch.to_data_list():
+        for batch in test_loader:
+            if len(batch) == 1:
+                datalist = [batch]
+            else:
+                datalist = batch.to_data_list()
+            for i, example in enumerate(datalist):
                 start_time = time.time()
-                x_in, edge_index, edge_weight, node_weight = featurize_batch(args, example)
-                x_out = model(
-                  x=x_in,
-                  edge_index=edge_index,
-                  edge_weight=edge_weight,
-                  node_weight=node_weight,
-                  vc_penalty=args.vc_penalty
-                )
-                loss = loss_fn(x_out, edge_index)
-                total_loss += loss.cpu().detach().numpy()
+                x_in, example = featurize_batch(args, example)
+                x_out = model(x_in, example)
+                loss = problem.loss(x_out, example)
 
-                x_proj = random_hyperplane_projector(args, x_out, example, score_fn)
+                total_loss += float(loss)
+
+                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
                 end_time = time.time()
 
                 # append times
@@ -64,36 +59,41 @@ def time_and_scores(args, model, val_loader, criterion=None, stop_early=False):
                 assert num_zeros == 0
 
                 # count the score
-                score = score_fn(args, x_proj, example)
-                scores.append( float(score.cpu().detach().numpy()))
+                score = problem.score(args, x_proj, example)
+                print(score, example.name, example.optimal)
+                scores.append(float(score))
                 total_count += 1
 
-                if stop_early:
-                    break
+            if stop_early:
+                return scores, times
 
-    return times, scores
+    return scores, times
+
 
 if __name__ == '__main__':
     args = parse_test_args()
     print(args)
 
     # get data, model
-    if args.use_val_set:
-        _, test_loader, _ = construct_loaders(args)
+    if args.dataset not in test_datasets:
+        if args.use_val_set:
+            _, test_loader, _ = construct_loaders(args)
+        else:
+            _, _, test_loader = construct_loaders(args)
     else:
-        _, _, test_loader = construct_loaders(args)
+        test_loader = construct_loaders(args, mode="test")
+
     model, _ = construct_model(args)
-    criterion = get_loss_fn(args)
+    problem = get_problem(args)
 
     # load model
     model = load_model(model, os.path.join(args.model_folder, args.model_file))
     model.to(args.device)
 
     # call test model
-    #predictions = validate(args, model, test_loader)
-    predictions = time_and_scores(args, model, test_loader, stop_early=True)
-    predictions = time_and_scores(args, model, test_loader)
-    times, scores = predictions
+    predictions = time_and_scores(args, model, test_loader, problem, stop_early=True) # to initialize CUDA
+    predictions = time_and_scores(args, model, test_loader, problem)
+    scores, times = predictions
     print(f'average score: {sum(scores) / len(scores)}')
 
     # TODO: fix output file?
