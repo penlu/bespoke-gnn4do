@@ -5,7 +5,7 @@ import torch
 from utils.parsing import parse_test_args
 import json
 import os
-from data.loader import construct_loaders
+from data.loader import construct_loaders, test_datasets
 from model.training import validate
 from model.models import construct_model
 from model.saving import load_model
@@ -17,7 +17,7 @@ from model.training import featurize_batch
 import time
 from problem.problems import get_problem
 
-
+from data.gset import load_gset
 
 '''
 python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230928_runs/230925_generated_liftMP_cut/paramhash:5ec32a71d1ff22fe501f860a672a8357b01df6f08a3406ab1ae315f0ed36b69a/" \
@@ -60,6 +60,7 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
 
                 # count the score
                 score = problem.score(args, x_proj, example)
+                print(score, example.name, example.optimal)
                 scores.append(float(score))
                 total_count += 1
 
@@ -74,10 +75,14 @@ if __name__ == '__main__':
     print(args)
 
     # get data, model
-    if args.use_val_set:
-        _, test_loader, _ = construct_loaders(args)
+    if args.dataset not in test_datasets:
+        if args.use_val_set:
+            _, test_loader, _ = construct_loaders(args)
+        else:
+            _, _, test_loader = construct_loaders(args)
     else:
-        _, _, test_loader = construct_loaders(args)
+        test_loader = construct_loaders(args, mode="test")
+
     model, _ = construct_model(args)
     problem = get_problem(args)
 

@@ -5,12 +5,23 @@ from data.gset import load_gset
 class ListDataset(Dataset):
     def __init__(self, data,
                   transform=None, pre_transform=None, pre_filter=None):
-        # apply pre_transform and pre_filter
-        self.data = [pre_transform(x) for x in data if pre_filter(x)]
+        # apply pre_filter
+        if pre_filter is not None:
+            data = [x for x in data if pre_filter(x)]
+
+        # apply pre_transform
+        if pre_transform is not None:
+            data = [pre_transform(x) for x in data]
+
+        self.data = data
         self.transform = transform
 
     def __getitem__(self, index):
-        return self.transform(self.data[index])
+        if self.transform is not None:
+            return self.transform(self.data[index])
+        else:
+            print(self.data[index])
+            return self.data[index]
 
     def __len__(self):
         return len(self.data)

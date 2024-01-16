@@ -52,6 +52,7 @@ def add_dataset_args(parser: ArgumentParser):
                             'REDDIT-MULTI-12K',
                             'REDDIT-BINARY',
                             'random-sat',
+                            'kamis', 'gset',
                         ],
                         help='Dataset type to use')
 
@@ -226,7 +227,7 @@ def read_params_from_folder(model_folder):
     return model_args
 
 def parse_test_args() -> Namespace:
-    parser = ArgumentParser()
+    parser = ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument('--model_folder', type=str, default=None,
                         help='folder to look in.')
     parser.add_argument('--model_file', type=str, default=None,
@@ -237,8 +238,7 @@ def parse_test_args() -> Namespace:
                         help='use the validation set instead of the test set')
     parser.add_argument('--problem_type', type=str, default="",
                         help='test_problem_type')
-    #add_general_args(parser)
-    #add_dataset_args(parser)
+    add_dataset_args(parser)
     args = parser.parse_args()
 
     # read params from model folder.
