@@ -155,6 +155,9 @@ class SATProblem(OptProblem):
         pair_index = example.pair_index
         X[pair_index[0]] = X[pair_index[1]] * X[pair_index[2]]
 
+        # TODO need to sanity check this objective -- reports better than 7/8 even without training
+        # compare assigned score vs. actual SAT clauses
+
         objective = sdp_objective(X, example)
         constraint = sdp_constraint(X, example)
 

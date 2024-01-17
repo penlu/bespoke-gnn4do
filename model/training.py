@@ -129,11 +129,11 @@ def train(args, model, train_loader, optimizer, problem, val_loader=None, test_l
             optimizer.step()
 
             # calculate and store average loss for batch
-            avg_loss = loss.cpu().detach().numpy() / batch.num_graphs
+            avg_loss = float(loss) / batch.num_graphs
             train_losses.append(avg_loss)
 
             # increment epoch loss counters
-            epoch_total_loss += loss.cpu().detach().numpy()
+            epoch_total_loss += float(loss)
             epoch_count += batch.num_graphs
 
             steps += 1
