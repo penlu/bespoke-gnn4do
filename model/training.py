@@ -30,8 +30,6 @@ def featurize_batch(args, batch):
         x_in = torch.cat((x_in, pe), 1)
     elif args.positional_encoding == 'random_walk':
         # XXX add the random walk PE here
-        print("edge index shape", batch.edge_index.shape)
-        print("edge weight shape", batch.edge_weight.shape)
         if not hasattr(batch, 'random_walk_pe'):
             batch = AddRandomWalkPE(walk_length=args.pe_dimension)(batch.to(args.device))
         x_in = torch.randn((N, args.rank - args.pe_dimension), dtype=torch.float, device=args.device)
