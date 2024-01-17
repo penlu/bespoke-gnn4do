@@ -162,7 +162,6 @@ def random_hyperplane_projector(args, x_lift, batch, score_fn):
 
     out = []
     for i in range(len(batch)):
-        total_score += scores[best[i], i]
         out.append(x_int[best[i], batch.ptr[i]:batch.ptr[i + 1], 0])
     out = torch.cat(out, dim=0)
 
