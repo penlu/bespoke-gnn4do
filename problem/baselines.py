@@ -124,12 +124,13 @@ def e1_projector(args, x_lift, example, score_fn):
     return torch.sign(x_lift[:, 0, None])
 
 # returns a torch.FloatTensor size (N,)
-def random_hyperplane_projector(args, x_lift, example, score_fn):
+def random_hyperplane_projector(args, x_lift, batch, score_fn):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
 
+    #torch.cuda.memory._record_memory_history(enabled=True, trace_alloc_max_entries=100000, trace_alloc_record_context=True)
     n_hyperplanes = 1000 # TODO make this modifiable in args
-    n_groups = 1 # we do it in groups to reduce memory consumption
+    n_groups = 1 # we may do it in groups to reduce memory consumption
     x_int = []
     scores = []
     for i in range(n_groups):
@@ -137,17 +138,42 @@ def random_hyperplane_projector(args, x_lift, example, score_fn):
         hyper = F.normalize(hyper)
         x_proj = torch.matmul(hyper, x_lift.t())
         group_x_int = torch.sign(x_proj)[:, :, None]
-        group_scores = torch.vmap(lambda x: score_fn(args, x, example))(group_x_int)
         x_int.append(group_x_int)
+
+        # here we score on each component of the batch individually
+        group_scores = []
+        # TODO make this compatible with single-example hyperplane rounding
+        for i, example in enumerate(batch.to_data_list()):
+            # TODO need to transfer some characteristics added by featurize_batch
+            # XXX the penalty hack here is not ok under many conditions!
+            example_x_int = group_x_int[:, batch.ptr[i]:batch.ptr[i + 1], :]
+            example.penalty = batch.penalty
+            group_example_scores = torch.vmap(lambda x: score_fn(args, x, example))(example_x_int)
+            group_scores.append(group_example_scores)
+
+        # stack these scores to form a (hyperplanes x graphs) tensor
+        group_scores = torch.stack(group_scores, dim=1)
         scores.append(group_scores)
-    x_int = torch.cat(x_int)
-    scores = torch.cat(scores)
-    best = torch.argmax(scores)
-    out = x_int[best, :, 0]
+
+    x_int = torch.cat(x_int, dim=0) # now (1000 x nodes_in_batch x 1)
+    scores = torch.cat(scores, dim=0) # now (1000 x graphs_in_batch)
+
+    best = torch.argmax(scores, dim=0) # now (graphs_in_batch), best hyperplane index for each graph
+
+    out = []
+    for i in range(len(batch)):
+        total_score += scores[best[i], i]
+        out.append(x_int[best[i], batch.ptr[i]:batch.ptr[i + 1], 0])
+    out = torch.cat(out, dim=0)
 
     num_zeros = (out == 0).count_nonzero()
     if num_zeros > 0:
         print("WARNING: detected zeros in hyperplane rounding output")
+
+    #import pickle
+    #pickle.dump(torch.cuda.memory._snapshot(), open('snapshot.pickle', 'wb'))
+    #torch.cuda.memory._record_memory_history(enabled=None)
+    #exit(0)
 
     return out
 

@@ -65,28 +65,27 @@ def validate(args, model, val_loader, problem):
                 datalist = [batch]
             else:
                 datalist = batch.to_data_list()
-            # TODO re-batch this
-            for example in datalist:
-                x_in, example = featurize_batch(args, example)
-                x_out = model(x_in, example)
-                loss = problem.loss(x_out, example)
 
-                total_loss += float(loss)
+            x_in, batch = featurize_batch(args, batch)
+            x_out = model(x_in, batch)
+            loss = problem.loss(x_out, batch)
 
-                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
+            total_loss += float(loss)
 
-                # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-                x_proj = torch.where(x_proj == 0, 1, x_proj)
+            x_proj = random_hyperplane_projector(args, x_out, batch, problem.score)
 
-                num_zeros = (x_proj == 0).count_nonzero()
-                assert num_zeros == 0
+            # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
+            x_proj = torch.where(x_proj == 0, 1, x_proj)
 
-                # count the score
-                score = problem.score(args, x_proj, example)
-                total_score += float(score)
-                total_constraint += float(problem.constraint(x_proj, example))
+            num_zeros = (x_proj == 0).count_nonzero()
+            assert num_zeros == 0
 
-                total_count += 1
+            # count the score
+            score = problem.score(args, x_proj, batch)
+            total_score += float(score)
+            total_constraint += float(problem.constraint(x_proj, batch))
+
+            total_count += len(batch)
 
     return total_loss / total_count, total_score / total_count, total_constraint / total_count
 
