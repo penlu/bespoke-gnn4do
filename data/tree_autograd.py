@@ -552,7 +552,7 @@ def tree_autograd(clauses,signs,X,params):
     
     #set of hyperparameters
     num_pivot = params['num_pivot']
-    hyperplane = params['hyperplane']
+    hyper = params['hyper']
     dimension = params['dimension']
     penalty = params['penalty']
 
@@ -583,9 +583,11 @@ def tree_autograd(clauses,signs,X,params):
     answers = []
     
     #batch handling: consider removing this
-    num_epochs = 1000 #number of optimization iterations
+    init_epoch = 1000 #number of optimization iterations
+    later_epoch = 50 #number of opt iterations after first node
     batch_size = 50 #number of frozen variables per batch
-    batch_iter = 50 #number of iterations per batch
+    batch_iter_init = 50 #number of iterations per batch
+    batch_iter_later = 10 #number of iterations per batch after first node
     tree_limit = 1000 #num_epochs * tree_limit = total iterations
         
     #iterations of tree search 
@@ -596,13 +598,16 @@ def tree_autograd(clauses,signs,X,params):
         X_ext,pivots,score = node
         X_ext.requires_grad_()
         piv,vals = pivots
-
+        
+        #handling first node vs later nodes
         if it == 0:
-            num_epochs = 1000 # Number of optimization iterations
+            num_epochs = init_epoch # Number of optimization iterations
+            batch_iter = batch_iter_init
         else:
-            num_epochs = 50
-            batch_iter = 10
-
+            num_epochs = later_epoch
+            batch_iter = batch_iter_later
+        
+        #central optimization loop
         for epoch in range(num_epochs):
             # Calculate the function value and gradient
             if epoch%batch_iter == 0:
@@ -640,20 +645,18 @@ def tree_autograd(clauses,signs,X,params):
     
             # Compute the gradient of the function with respect to x
             obj.backward()
-            #print('grad: ', X.grad)
         
             optimizer.step()
     
         X_ext.requires_grad_(False)
-        h = 100
-        hyperplane = torch.randn(h,X_ext.shape[1],device=device)
+        hyperplane = torch.randn(hyper,X_ext.shape[1],device=device)
         norms = torch.norm(hyperplane, p=2, dim=1, keepdim=True)
         hyperplane = hyperplane/norms
         ans = torch.sign(torch.matmul(X_ext,torch.transpose(hyperplane,0,1)))
         sat = SATProblem()
         args = None
         candidates = []
-        for i in range(h):
+        for i in range(hyper):
             candidates.append(sat.score(args,ans[:,i],data))
             
         score = max(candidates)
@@ -669,7 +672,6 @@ def tree_autograd(clauses,signs,X,params):
         for i in range(N):
             crit_enum.append((i,criticals[i]))
         
-        num_pivot = 5
         piv = sample_unique_numbers(0, N-1, num_pivot)
         vals = 2*torch.bernoulli(torch.tensor([0.5]*num_pivot)) - torch.ones(num_pivot)
         node_x = X_ext.clone()
@@ -702,7 +704,7 @@ if __name__ == '__main__':
     
     params = {}
     params['num_pivot'] = 5
-    params['hyperplane'] = 100
+    params['hyper'] = 100
     params['dimension'] = 5
     params['penalty'] = 0.01
     
