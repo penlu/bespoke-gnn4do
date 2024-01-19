@@ -548,13 +548,20 @@ class node:
         self.pivots = pivots
         self.obj = obj 
     
-def tree_autograd(clauses,signs,X,batch=True):
+def tree_autograd(clauses,signs,X,params):
+    
+    #set of hyperparameters
+    num_pivot = params['num_pivot']
+    hyperplane = params['hyperplane']
+    dimension = params['dimension']
+    penalty = params['penalty']
+
+    #compile sat instance 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     total_vars, pair_to_index, data = compile_sat(clauses, signs, N, K)
     data = data.to(device)
 
     # extend random assignment into ij domain
-    dimension = 2
     X_ext = torch.zeros(total_vars, dimension, device=device)
     for i in range(N):
         X_ext[i, 0] = X[i]
@@ -567,50 +574,35 @@ def tree_autograd(clauses,signs,X,batch=True):
         X_ext[pair_to_index[i, k], 0] = X[i] * X[k]
         X_ext[pair_to_index[j, k], 0] = X[j] * X[k]
     
-    from collections import deque
-    #tree = deque()
+    #initialize tree
+    #TODO: right now there is no tree just bit flipping
     tree = []
     pivots = (torch.tensor([],device=device),torch.tensor([],device=device))
     X_ext.requires_grad_()
     tree.append((X_ext,pivots,float('inf')))
     answers = []
     
-    num_epochs = 10 # Number of optimization iterations
-    batch_size = 50
-    batch_iter = 50
-    tree_limit = 1000
+    #batch handling: consider removing this
+    num_epochs = 1000 #number of optimization iterations
+    batch_size = 50 #number of frozen variables per batch
+    batch_iter = 50 #number of iterations per batch
+    tree_limit = 1000 #num_epochs * tree_limit = total iterations
         
     #iterations of tree search 
     import random
     for it in range(tree_limit):
-        #
-        scores = [score for _,_,score in tree]
-        if torch.bernoulli(torch.tensor(0.2)) == torch.tensor(1):
-            index_node = random.randint(0,len(tree)-1)
-            node = tree[index_node]
-        else: 
-            index_node,node = [(i,node) for i,node in enumerate(tree) if node[2] == max(scores)][0]
-        
+        #right now tree only has one node 
+        node = tree[0]
         X_ext,pivots,score = node
         X_ext.requires_grad_()
         piv,vals = pivots
-        print('piv: ', piv)
-        print('vals: ', vals)
-        # Step 3: Choose an optimization algorithm (e.g., Stochastic Gradient Descent - SGD)
 
-        # Step 4: Perform the optimization loop
         if it == 0:
-            num_epochs = 10 # Number of optimization iterations
-            mu = 0.01
-            mu_norm = 0.01
-            rate = 0.1
+            num_epochs = 1000 # Number of optimization iterations
         else:
             num_epochs = 50
             batch_iter = 10
-            mu = 0.01
-            mu_norm = 0.01
-        #construct the optimizer
-        #optimizer = Adam([X_ext], lr=rate)#pecify the learning rate
+
         for epoch in range(num_epochs):
             # Calculate the function value and gradient
             if epoch%batch_iter == 0:
@@ -634,11 +626,6 @@ def tree_autograd(clauses,signs,X,batch=True):
                     batch_rows[index] = pair_to_index[pair[0],pair[1]]
                     index += 1
                 batch_rows = batch_rows.int()
-                #X_batch = X_ext[batch_rows]
-                #print('X batch: ', X_batch)
-                # Detach and clone the slice to create a new leaf tensor
-                #X_ext.detach()
-                #X_batch = X_ext[batch_rows].detach().clone().requires_grad_(True)
                 optimizer = Adam([X_ext], lr=0.1) #specify the learning rate
                 remainder = torch.tensor(list(set([torch.tensor(i) for i in range(X_ext.shape[0])]) - set(batch_rows)))
                 X_ext[remainder].detach()
@@ -647,14 +634,7 @@ def tree_autograd(clauses,signs,X,batch=True):
             constraint = sdp_constraint(X_ext, data)
             norm = sdp_norm(X_ext,data)
             fixing = sdp_pivot(X_ext,data,pivots)
-            #mu = 0.005
-            #mu = 0.003
-            obj = -1.0*objective + mu*constraint + mu_norm*norm + 1000*fixing
-            if epoch%30 == 0:
-                print('epoch: ', epoch)
-                print('obj: ', obj)
-                #print('fixing: ', fixing)
-                #print('X piv: ', X_ext[piv.int(),:])
+            obj = -1.0*objective + penalty*(constraint + norm) + 1000*fixing
             # Clear the gradients from the previous iteration
             optimizer.zero_grad()
     
@@ -665,13 +645,11 @@ def tree_autograd(clauses,signs,X,batch=True):
             optimizer.step()
     
         X_ext.requires_grad_(False)
-        #X_ext = X_ext/torch.norm(X_ext,p=2,dim=1,keepdim=True)
         h = 100
         hyperplane = torch.randn(h,X_ext.shape[1],device=device)
         norms = torch.norm(hyperplane, p=2, dim=1, keepdim=True)
         hyperplane = hyperplane/norms
         ans = torch.sign(torch.matmul(X_ext,torch.transpose(hyperplane,0,1)))
-        #X_ext[:,0] = torch.sign(X_ext[:,0]) 
         sat = SATProblem()
         args = None
         candidates = []
@@ -681,15 +659,12 @@ def tree_autograd(clauses,signs,X,batch=True):
         score = max(candidates)
         answers.append(score)
         print('sat score: ', score)
-        #print('answers: ', answers)
         print('MAX ANSWER: ', max(answers))
         #get index of max score
         index = [it for it,cand in enumerate(candidates) if cand== max(candidates)][0]
-        #find the critical variable
-        #criticals = torch.matmul(X_ext,hyperplane[index,:])
         criticals = X_ext[:N,0]
         criticals = torch.abs(criticals[:N])
-        print('min critical: ', min(criticals))
+        #print('min critical: ', min(criticals))
         crit_enum = []
         for i in range(N):
             crit_enum.append((i,criticals[i]))
@@ -701,75 +676,13 @@ def tree_autograd(clauses,signs,X,batch=True):
         vals = vals.to(device)
         node_x.to(device)
         piv = torch.tensor(piv)
-        #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #print('device: ', device)
-        #print('before: ', piv.device)
         piv = piv.to(device)
-        #print(node_x.device)
-        #print('after: ', piv.device)
-        #print(vals.device)
         node_x[piv,0] = vals
         node_x.requires_grad_(True)
-        print('piv: ', piv)
-        print('vals: ', vals)
         node = (node_x,(piv,vals),score)
-        del tree[index_node]
-        tree.append(node)
         
-        
-        # crit_cand = crit_enum[:num_pivot]
-        # for i in range(N):
-        #     val = [val for i,val in crit_cand]
-        #     indices = [i for i,val in crit_cand]
-        #     max_crit = max(val)
-        #     max_index = indices.index(max_crit)
-        #     if criticals[i] < max_crit:
-        #         crit_cand.remove((max_index,crit_cand))
-        #         crit_cand.append(criticals[i])
-        
-        
-        
-        #locate pivot variable
-        # while True:
-        #     min_crit = min([val for index,val in crit_enum])
-        #     crit = [it for it,cand in crit_enum if cand==min_crit][0]
-        #     if crit in piv:
-        #         for i in range(len(crit_enum)):
-        #             index,val = crit_enum[i]
-        #             if val == min_crit:
-        #                 del crit_enum[i]
-        #                 break
-        #     if crit not in piv:
-        #         break
-            
-#         node_left_x = X_ext.clone()
-#         node_right_x = X_ext.clone()
-#         node_left_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
-#         node_left_x[crit,0] = 1
-#         node_right_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
-#         node_right_x[crit,0] = -1
-#         node_left_x.requires_grad_(True)
-#         node_right_x.requires_grad_(True)
-#         piv,vals = pivots
-        
-#         #create left pivot 
-#         piv_left = torch.cat((piv,torch.tensor([crit],device=device)),0)
-#         vals_left = torch.cat((vals,torch.tensor([1],device=device)),0)
-#         pivots_left = (piv_left,vals_left)
-        
-#         #create right pivot
-#         piv_right = torch.cat((piv,torch.tensor([crit],device=device)),0)
-#         vals_right = torch.cat((vals,torch.tensor([-1],device=device)),0)
-#         pivots_right = (piv_right,vals_right)
-#         node_left = (node_left_x,pivots_left,score)
-#         node_right = (node_right_x,pivots_right,score)
-        
-#         #append nodes to tree
-#         #print('index before delete: ', index)
-#         #print('tree: ', tree)
-#         del tree[index_node]
-#         tree.append(node_left)
-#         tree.append(node_right)
+        #we would have to delete the existing node if we were working with trees
+        tree = [node]
     
     
     return answers
@@ -777,47 +690,24 @@ def tree_autograd(clauses,signs,X,batch=True):
     #print('sat score: ', sat.score(args,X_ext,data))
 
 if __name__ == '__main__':
-    print("hello! I am data/sat.py and it is time to run some tests")
+    print("hello! I am data/tree_autograd.py and it is time to run some tests")
     seed = 0
     N = 100
     K = 400
     
     random_state = np.random.RandomState(seed)
     clauses, signs = random_3sat_clauses(random_state, N, K)
-    print('clauses: ', clauses)
-    print('signs: ', signs)
-    print(len(clauses))
-    print(len(signs))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
     
-    tree_autograd(clauses,signs,X)
-    #tree_autograd(clauses,signs,X)
-
-    # run test: produce random assignment, then feed to both
-    #run_equivalence_test(clauses, signs, X)
-
-    #gen = random_3sat_generator(0, n=4, K=2, p=0.5)
-    #d1 = gen.__next__()
-    #d2 = gen.__next__()
-    #print_sat_data(d1)
-    #print()
-    #print_sat_data(d2)
-    #print()
-
-    #batch = Batch.from_data_list([d1, d2])
-    #print_sat_data(batch)
-    #rounds = 10
-    #candidates = torch.zeros(rounds) 
-    #for i in range(rounds):
-    #    random_state = np.random.RandomState(seed)
-    #    clauses, signs = random_3sat_clauses(random_state, N, K)
-
-    #    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #    X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
-    #    candidates[i] = autograd(clauses,signs,X)
-    #print('candidates: ', candidates)
-    #print('final average: ', torch.mean(candidates))
+    params = {}
+    params['num_pivot'] = 5
+    params['hyperplane'] = 100
+    params['dimension'] = 5
+    params['penalty'] = 0.01
+    
+    tree_autograd(clauses,signs,X,params)
+    
     
     
 
