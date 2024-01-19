@@ -575,7 +575,7 @@ def tree_autograd(clauses,signs,X,batch=True):
     tree.append((X_ext,pivots,float('inf')))
     answers = []
     
-    num_epochs = 1000 # Number of optimization iterations
+    num_epochs = 10 # Number of optimization iterations
     batch_size = 50
     batch_iter = 50
     tree_limit = 1000
@@ -600,12 +600,12 @@ def tree_autograd(clauses,signs,X,batch=True):
 
         # Step 4: Perform the optimization loop
         if it == 0:
-            num_epochs = 1000 # Number of optimization iterations
+            num_epochs = 10 # Number of optimization iterations
             mu = 0.01
             mu_norm = 0.01
             rate = 0.1
         else:
-            num_epochs = 30
+            num_epochs = 50
             batch_iter = 10
             mu = 0.01
             mu_norm = 0.01
@@ -666,7 +666,7 @@ def tree_autograd(clauses,signs,X,batch=True):
     
         X_ext.requires_grad_(False)
         #X_ext = X_ext/torch.norm(X_ext,p=2,dim=1,keepdim=True)
-        h = 50
+        h = 100
         hyperplane = torch.randn(h,X_ext.shape[1],device=device)
         norms = torch.norm(hyperplane, p=2, dim=1, keepdim=True)
         hyperplane = hyperplane/norms
@@ -682,7 +682,7 @@ def tree_autograd(clauses,signs,X,batch=True):
         answers.append(score)
         print('sat score: ', score)
         #print('answers: ', answers)
-        print('max answer: ', max(answers))
+        print('MAX ANSWER: ', max(answers))
         #get index of max score
         index = [it for it,cand in enumerate(candidates) if cand== max(candidates)][0]
         #find the critical variable
@@ -694,12 +694,27 @@ def tree_autograd(clauses,signs,X,batch=True):
         for i in range(N):
             crit_enum.append((i,criticals[i]))
         
-        num_pivot = 3
-        samples = sample_unique_numbers(0, N-1, num_pivot):
-        piv_vals = torch.bernoulli(torch.tensor([0.5]*num_pivot))
-        node = X_ext.clone()
-        for i in range(num_pivot):
-            
+        num_pivot = 5
+        piv = sample_unique_numbers(0, N-1, num_pivot)
+        vals = 2*torch.bernoulli(torch.tensor([0.5]*num_pivot)) - torch.ones(num_pivot)
+        node_x = X_ext.clone()
+        vals = vals.to(device)
+        node_x.to(device)
+        piv = torch.tensor(piv)
+        #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        #print('device: ', device)
+        #print('before: ', piv.device)
+        piv = piv.to(device)
+        #print(node_x.device)
+        #print('after: ', piv.device)
+        #print(vals.device)
+        node_x[piv,0] = vals
+        node_x.requires_grad_(True)
+        print('piv: ', piv)
+        print('vals: ', vals)
+        node = (node_x,(piv,vals),score)
+        del tree[index_node]
+        tree.append(node)
         
         
         # crit_cand = crit_enum[:num_pivot]
@@ -727,34 +742,34 @@ def tree_autograd(clauses,signs,X,batch=True):
         #     if crit not in piv:
         #         break
             
-        node_left_x = X_ext.clone()
-        node_right_x = X_ext.clone()
-        node_left_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
-        node_left_x[crit,0] = 1
-        node_right_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
-        node_right_x[crit,0] = -1
-        node_left_x.requires_grad_(True)
-        node_right_x.requires_grad_(True)
-        piv,vals = pivots
+#         node_left_x = X_ext.clone()
+#         node_right_x = X_ext.clone()
+#         node_left_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
+#         node_left_x[crit,0] = 1
+#         node_right_x[crit,:] = torch.zeros(X_ext.shape[1],device=device)
+#         node_right_x[crit,0] = -1
+#         node_left_x.requires_grad_(True)
+#         node_right_x.requires_grad_(True)
+#         piv,vals = pivots
         
-        #create left pivot 
-        piv_left = torch.cat((piv,torch.tensor([crit],device=device)),0)
-        vals_left = torch.cat((vals,torch.tensor([1],device=device)),0)
-        pivots_left = (piv_left,vals_left)
+#         #create left pivot 
+#         piv_left = torch.cat((piv,torch.tensor([crit],device=device)),0)
+#         vals_left = torch.cat((vals,torch.tensor([1],device=device)),0)
+#         pivots_left = (piv_left,vals_left)
         
-        #create right pivot
-        piv_right = torch.cat((piv,torch.tensor([crit],device=device)),0)
-        vals_right = torch.cat((vals,torch.tensor([-1],device=device)),0)
-        pivots_right = (piv_right,vals_right)
-        node_left = (node_left_x,pivots_left,score)
-        node_right = (node_right_x,pivots_right,score)
+#         #create right pivot
+#         piv_right = torch.cat((piv,torch.tensor([crit],device=device)),0)
+#         vals_right = torch.cat((vals,torch.tensor([-1],device=device)),0)
+#         pivots_right = (piv_right,vals_right)
+#         node_left = (node_left_x,pivots_left,score)
+#         node_right = (node_right_x,pivots_right,score)
         
-        #append nodes to tree
-        #print('index before delete: ', index)
-        #print('tree: ', tree)
-        del tree[index_node]
-        tree.append(node_left)
-        tree.append(node_right)
+#         #append nodes to tree
+#         #print('index before delete: ', index)
+#         #print('tree: ', tree)
+#         del tree[index_node]
+#         tree.append(node_left)
+#         tree.append(node_right)
     
     
     return answers
