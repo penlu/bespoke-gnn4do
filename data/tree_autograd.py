@@ -5,12 +5,11 @@ import torch
 from torch_geometric.utils import to_edge_index
 from torch_geometric.data import Data, Batch
 from torch.optim import Adam
+import time
 
 import sys
 sys.path.append('/home/gridsan/myau/bespoke-gnn4do/problem')
 sys.path.append('/home/gridsan/myau/bespoke-gnn4do')
-for path in sys.path:
-    print(path)
     
 #from baselines import random_hyperplane_projector
 #from problem.problems import SATProblem
@@ -555,6 +554,7 @@ def tree_autograd(clauses,signs,X,params):
     hyper = params['hyper']
     dimension = params['dimension']
     penalty = params['penalty']
+    total_nodes = params['total_nodes']
 
     #compile sat instance 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -588,11 +588,13 @@ def tree_autograd(clauses,signs,X,params):
     batch_size = 50 #number of frozen variables per batch
     batch_iter_init = 50 #number of iterations per batch
     batch_iter_later = 10 #number of iterations per batch after first node
-    tree_limit = 1000 #num_epochs * tree_limit = total iterations
-        
+    tree_limit = 100 #num_epochs * tree_limit = total iterations
+    timing = [] #record of times
+    start_time = time.time()
     #iterations of tree search 
     import random
-    for it in range(tree_limit):
+    for it in range(total_nodes):
+        print('tree it: ', it)
         #right now tree only has one node 
         node = tree[0]
         X_ext,pivots,score = node
@@ -685,9 +687,11 @@ def tree_autograd(clauses,signs,X,params):
         
         #we would have to delete the existing node if we were working with trees
         tree = [node]
+        end_time = time.time()
+        timing.append(end_time - start_time)
     
-    
-    return answers
+    output = [max(answers[:i+1]) for i in range(len(answers))]
+    return (output,timing)
     
     #print('sat score: ', sat.score(args,X_ext,data))
 
@@ -704,12 +708,54 @@ if __name__ == '__main__':
     
     params = {}
     params['num_pivot'] = 5
-    params['hyper'] = 100
+    params['hyper'] = 4
     params['dimension'] = 5
     params['penalty'] = 0.01
+    params['total_nodes'] = 200
     
-    tree_autograd(clauses,signs,X,params)
+    num_runs = 20
+    final_output = torch.zeros((num_runs,params['total_nodes'])) 
+    final_timing = torch.zeros((num_runs,params['total_nodes']))
     
+    torch.save(final_output, 'output.pt')
+    torch.save(final_output, 'timing.pt')
+    
+    for run in range(num_runs):
+        output,timing = tree_autograd(clauses,signs,X,params)
+        print('output: ', output)
+        print('timing: ', timing)
+        final_output[run,:] = torch.tensor(output)
+        final_timing[run,:] = torch.tensor(timing)
+    print('final output: ', final_output)
+    print('final timing: ', final_timing)
+    import matplotlib.pyplot as plt
+
+    # Example 2D tensor 'Data'
+    data = final_output
+    time = final_timing
+    # Calculate the average of each column
+    time = time.mean(dim=0)
+
+    # Calculate the average and standard deviation of each column in Data
+    avg_data = data.mean(dim=0)
+    std_data = data.std(dim=0)
+
+    # Plotting
+    plt.figure(figsize=(12, 8))
+    # Plot line for averages
+    plt.plot(time.numpy(), avg_data.numpy(), label='Average Data', linestyle='-', color='blue', marker='o')
+    # Plot error bars
+    plt.errorbar(time.numpy(), avg_data.numpy(), yerr=std_data.numpy(), fmt='o', ecolor='lightgray', elinewidth=3, capsize=0)
+    # Add shaded error
+    plt.fill_between(time.numpy(), avg_data.numpy() - std_data.numpy(), avg_data.numpy() + std_data.numpy(), color='lightblue', alpha=0.5)
+
+    plt.xlabel('Time')
+    plt.ylabel('Average Data')
+    plt.title('Plot of Averages with Error Bars and Shading')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('autograd.png')
+    plt.show()
     
     
 
