@@ -555,6 +555,7 @@ def tree_autograd(clauses,signs,X,params):
     dimension = params['dimension']
     penalty = params['penalty']
     total_nodes = params['total_nodes']
+    batch = params['batch']
 
     #compile sat instance 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -590,8 +591,8 @@ def tree_autograd(clauses,signs,X,params):
     batch_iter_later = 10 #number of iterations per batch after first node
     tree_limit = 100 #num_epochs * tree_limit = total iterations
     timing = [] #record of times
-    start_time = time.time()
     #iterations of tree search 
+    start_time = time.time()
     import random
     for it in range(total_nodes):
         print('tree it: ', it)
@@ -611,31 +612,37 @@ def tree_autograd(clauses,signs,X,params):
         
         #central optimization loop
         for epoch in range(num_epochs):
+            if epoch%100 == 0:
+                print('epoch: ', epoch)
             # Calculate the function value and gradient
-            if epoch%batch_iter == 0:
-                num = len(clauses)
-                select = sample_unique_numbers(0,num-1,batch_size)
-                clauses_batch = clauses[select]
-                batch_set = set() #set of single vars
-                pairs_set = set() #set of pair vars
-                for cl in clauses_batch: 
-                    batch_set |= set(cl)
-                    for i in range(len(cl)):
-                        pr = cl.copy()
-                        pr = np.delete(cl,i)
-                        pairs_set.add(tuple(pr))
-                batch_rows = torch.zeros(len(batch_set) + len(pairs_set))
-                index = 0
-                for single in batch_set:
-                    batch_rows[index] = single
-                    index += 1
-                for pair in pairs_set:
-                    batch_rows[index] = pair_to_index[pair[0],pair[1]]
-                    index += 1
-                batch_rows = batch_rows.int()
-                optimizer = Adam([X_ext], lr=0.1) #specify the learning rate
-                remainder = torch.tensor(list(set([torch.tensor(i) for i in range(X_ext.shape[0])]) - set(batch_rows)))
-                X_ext[remainder].detach()
+            if batch: 
+                if epoch%batch_iter == 0:
+                    num = len(clauses)
+                    select = sample_unique_numbers(0,num-1,batch_size)
+                    clauses_batch = clauses[select]
+                    batch_set = set() #set of single vars
+                    pairs_set = set() #set of pair vars
+                    for cl in clauses_batch: 
+                        batch_set |= set(cl)
+                        for i in range(len(cl)):
+                            pr = cl.copy()
+                            pr = np.delete(cl,i)
+                            pairs_set.add(tuple(pr))
+                    batch_rows = torch.zeros(len(batch_set) + len(pairs_set))
+                    index = 0
+                    for single in batch_set:
+                        batch_rows[index] = single
+                        index += 1
+                    for pair in pairs_set:
+                        batch_rows[index] = pair_to_index[pair[0],pair[1]]
+                        index += 1
+                    batch_rows = batch_rows.int()
+                    optimizer = Adam([X_ext], lr=0.1) #specify the learning rate
+                    remainder = torch.tensor(list(set([torch.tensor(i) for i in range(X_ext.shape[0])]) - set(batch_rows)))
+                    X_ext[remainder].detach()
+            else: 
+                 optimizer = Adam([X_ext], lr=0.1) #specify the learning rate
+                
             # Calculate the function value and gradient
             objective = sdp_objective(X_ext, data)
             constraint = sdp_constraint(X_ext, data)
@@ -658,22 +665,26 @@ def tree_autograd(clauses,signs,X,params):
         sat = SATProblem()
         args = None
         candidates = []
+        print('hyerplane rounding start')
         for i in range(hyper):
             candidates.append(sat.score(args,ans[:,i],data))
-            
+        print('hyperplane rounding end')    
         score = max(candidates)
         answers.append(score)
         print('sat score: ', score)
         print('MAX ANSWER: ', max(answers))
         #get index of max score
-        index = [it for it,cand in enumerate(candidates) if cand== max(candidates)][0]
-        criticals = X_ext[:N,0]
-        criticals = torch.abs(criticals[:N])
+        #print('chunk 1')
+        #index = candidates.index(max(candidates))
+        #criticals = X_ext[:N,0]
+        #criticals = torch.abs(criticals[:N])
         #print('min critical: ', min(criticals))
-        crit_enum = []
-        for i in range(N):
-            crit_enum.append((i,criticals[i]))
+        #crit_enum = []
+        #print('start for loop')
+        #for i in range(N):
+        #    crit_enum.append((i,criticals[i]))
         
+        #print('chunk 2')
         piv = sample_unique_numbers(0, N-1, num_pivot)
         vals = 2*torch.bernoulli(torch.tensor([0.5]*num_pivot)) - torch.ones(num_pivot)
         node_x = X_ext.clone()
@@ -689,6 +700,7 @@ def tree_autograd(clauses,signs,X,params):
         tree = [node]
         end_time = time.time()
         timing.append(end_time - start_time)
+        print('end iter')
     
     output = [max(answers[:i+1]) for i in range(len(answers))]
     return (output,timing)
@@ -701,12 +713,22 @@ if __name__ == '__main__':
     N = 100
     K = 400
     
+    
     params = {}
+    #strong setting
+    #params['num_pivot'] = 5
+    #params['hyper'] = 4
+    #params['dimension'] = 5
+    #params['penalty'] = 0.01
+    #params['total_nodes'] = 200
+    
+    #vanilla setting
     params['num_pivot'] = 5
-    params['hyper'] = 4
-    params['dimension'] = 5
+    params['hyper'] = 1000
+    params['dimension'] = 100
     params['penalty'] = 0.01
-    params['total_nodes'] = 200
+    params['total_nodes'] = 10
+    params['batch'] = False
     
     num_runs = 20
     final_output = torch.zeros((num_runs,params['total_nodes'])) 
@@ -716,6 +738,7 @@ if __name__ == '__main__':
     torch.save(final_output, 'timing.pt')
     
     for run in range(num_runs):
+        print('RUN: ', run)
         random_state = np.random.RandomState(seed)
         clauses, signs = random_3sat_clauses(random_state, N, K)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -747,13 +770,14 @@ if __name__ == '__main__':
     plt.errorbar(time.numpy(), avg_data.numpy(), yerr=std_data.numpy(), fmt='o', ecolor='lightgray', elinewidth=3, capsize=0)
     # Add shaded error
     plt.fill_between(time.numpy(), avg_data.numpy() - std_data.numpy(), avg_data.numpy() + std_data.numpy(), color='lightblue', alpha=0.5)
+    plt.ylim(390, 400)
 
     plt.xlabel('Time')
     plt.ylabel('Average Data')
     plt.title('Plot of Averages with Error Bars and Shading')
     plt.legend()
     plt.grid(True)
-    plt.savefig('autograd.png')
+    plt.savefig('autograd_vanilla.png')
     plt.show()
     
     
