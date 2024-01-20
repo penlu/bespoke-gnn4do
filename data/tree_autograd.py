@@ -701,11 +701,6 @@ if __name__ == '__main__':
     N = 100
     K = 400
     
-    random_state = np.random.RandomState(seed)
-    clauses, signs = random_3sat_clauses(random_state, N, K)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
-    
     params = {}
     params['num_pivot'] = 5
     params['hyper'] = 4
@@ -721,6 +716,10 @@ if __name__ == '__main__':
     torch.save(final_output, 'timing.pt')
     
     for run in range(num_runs):
+        random_state = np.random.RandomState(seed)
+        clauses, signs = random_3sat_clauses(random_state, N, K)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        X = torch.bernoulli(torch.full((N,), 0.5, device=device))*2-1
         output,timing = tree_autograd(clauses,signs,X,params)
         print('output: ', output)
         print('timing: ', timing)
