@@ -7,3 +7,4 @@ baseline_runs/*
 .ipynb_checkpoints
 datasets/
 datasets_complement/
+ErdoSAT_repo/
