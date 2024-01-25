@@ -10,37 +10,9 @@ from torch_geometric.utils.convert import from_networkx
 from data.forced_rb_dataset import forced_rb_generator
 from data.sat import random_3sat_generator
 
-# a generator is a function that takes a seed and produces an iterator
-def construct_generator(args):
-    if args.dataset == 'ErdosRenyi':
-        gen_p = 0.15 if args.gen_p == None else args.gen_p
-        generator = lambda seed: erdos_renyi_generator(seed, n=args.gen_n, p=gen_p)
-        name = f'erdos_renyi_n{args.gen_n}_p{gen_p}'
-    elif args.dataset == 'BarabasiAlbert':
-        generator = lambda seed: barabasi_albert_generator(seed, n=args.gen_n, m=args.gen_m)
-        name = f'barabasi_albert_n{args.gen_n}_m{args.gen_m}'
-    elif args.dataset == 'PowerlawCluster':
-        gen_p = 0.25 if args.gen_p == None else args.gen_p
-        generator = lambda seed: powerlaw_cluster_generator(seed, n=args.gen_n, m=args.gen_m, p=gen_p)
-        name = f'powerlaw_cluster_n{args.gen_n}_m{args.gen_m}_p{gen_p}'
-    elif args.dataset == 'WattsStrogatz':
-        gen_p = 0.25 if args.gen_p == None else args.gen_p
-        generator = lambda seed: watts_strogatz_generator(seed, n=args.gen_n, k=args.gen_k, p=gen_p)
-        name = f'watts_strogatz_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
-    elif args.dataset == 'ForcedRB':
-        generator = lambda seed: forced_rb_generator(seed, n=args.RB_n, k=args.RB_k)
-        name = f'forced_rb_n{args.RB_n}_k{args.RB_k}'
-    elif args.dataset == 'random-sat':
-        gen_p = 0.5 if args.gen_p == None else args.gen_p
-        generator = lambda seed: random_3sat_generator(seed, n=args.gen_n, K=args.gen_k, p=gen_p)
-        name = f'sat_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
-    else:
-        raise ValueError('Got a bad generated dataset: {args.dataset}')
-
-    return generator, name
-
-def erdos_renyi_generator(seed, n=100, p=0.15):
-    # TODO all these ITE blocks should get merged
+# some of our command line arguments can be int, [int], or [int, int]
+# disassemble them into a min and max
+def disassemble_param(n=100):
     if isinstance(n, int):
         n_min = n
         n_max = n
@@ -50,8 +22,43 @@ def erdos_renyi_generator(seed, n=100, p=0.15):
     elif isinstance(n, list) and len(n) == 2:
         n_min, n_max = n
     else:
-        raise ValueError('erdos_renyi_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
+        raise ValueError('construct_generator got bad arg (expected int, [int], or [int, int]: {n}')
 
+    return n_min, n_max
+
+# a generator is a function that takes a seed and produces an iterator
+def construct_generator(args):
+    n_min, n_max = disassemble_param(n=args.gen_n)
+    k_min, k_max = disassemble_param(n=args.gen_k)
+
+    if args.dataset == 'ErdosRenyi':
+        gen_p = 0.15 if args.gen_p == None else args.gen_p
+        generator = lambda seed: erdos_renyi_generator(seed, n_min, n_max, p=gen_p)
+        name = f'erdos_renyi_n{args.gen_n}_p{gen_p}'
+    elif args.dataset == 'BarabasiAlbert':
+        generator = lambda seed: barabasi_albert_generator(seed, n_min, n_max, m=args.gen_m)
+        name = f'barabasi_albert_n{args.gen_n}_m{args.gen_m}'
+    elif args.dataset == 'PowerlawCluster':
+        gen_p = 0.25 if args.gen_p == None else args.gen_p
+        generator = lambda seed: powerlaw_cluster_generator(seed, n_min, n_max, m=args.gen_m, p=gen_p)
+        name = f'powerlaw_cluster_n{args.gen_n}_m{args.gen_m}_p{gen_p}'
+    elif args.dataset == 'WattsStrogatz':
+        gen_p = 0.25 if args.gen_p == None else args.gen_p
+        generator = lambda seed: watts_strogatz_generator(seed, n_min, n_max, k=k_min, p=gen_p)
+        name = f'watts_strogatz_n{args.gen_n}_k{k_min}_p{gen_p}'
+    elif args.dataset == 'ForcedRB':
+        generator = lambda seed: forced_rb_generator(seed, n=args.RB_n, k=args.RB_k)
+        name = f'forced_rb_n{args.RB_n}_k{args.RB_k}'
+    elif args.dataset == 'random-sat':
+        gen_p = 0.5 if args.gen_p == None else args.gen_p
+        generator = lambda seed: random_3sat_generator(seed, n_min, n_max, k_min, k_max, p=gen_p)
+        name = f'sat_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
+    else:
+        raise ValueError('Got a bad generated dataset: {args.dataset}')
+
+    return generator, name
+
+def erdos_renyi_generator(seed, n_min=100, n_max=100, p=0.15):
     random_state = np.random.RandomState(seed)
     while True:
         if n_min != n_max:
@@ -61,18 +68,7 @@ def erdos_renyi_generator(seed, n=100, p=0.15):
         G = nx.erdos_renyi_graph(n, p, seed=random_state)
         yield from_networkx(G)
 
-def barabasi_albert_generator(seed, n=100, m=4):
-    if isinstance(n, int):
-        n_min = n
-        n_max = n
-    elif isinstance(n, list) and len(n) == 1:
-        n_min = n[0]
-        n_max = n[0]
-    elif isinstance(n, list) and len(n) == 2:
-        n_min, n_max = n
-    else:
-        raise ValueError('barabasi_albert_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
-
+def barabasi_albert_generator(seed, n_min=100, n_max=100, m=4):
     random_state = np.random.RandomState(seed)
     while True:
         if n_min != n_max:
@@ -82,18 +78,7 @@ def barabasi_albert_generator(seed, n=100, m=4):
         G = nx.barabasi_albert_graph(n, m, seed=random_state)
         yield from_networkx(G)
 
-def powerlaw_cluster_generator(seed, n=100, m=4, p=0.25):
-    if isinstance(n, int):
-        n_min = n
-        n_max = n
-    elif isinstance(n, list) and len(n) == 1:
-        n_min = n[0]
-        n_max = n[0]
-    elif isinstance(n, list) and len(n) == 2:
-        n_min, n_max = n
-    else:
-        raise ValueError('powerlaw_cluster_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
-
+def powerlaw_cluster_generator(seed, n_min=100, n_max=100, m=4, p=0.25):
     random_state = np.random.RandomState(seed)
     while True:
         if n_min != n_max:
@@ -103,18 +88,7 @@ def powerlaw_cluster_generator(seed, n=100, m=4, p=0.25):
         G = nx.powerlaw_cluster_graph(n, m, p, seed=random_state)
         yield from_networkx(G)
 
-def watts_strogatz_generator(seed, n=100, k=4, p=0.25):
-    if isinstance(n, int):
-        n_min = n
-        n_max = n
-    elif isinstance(n, list) and len(n) == 1:
-        n_min = n[0]
-        n_max = n[0]
-    elif isinstance(n, list) and len(n) == 2:
-        n_min, n_max = n
-    else:
-        raise ValueError('watts_strogatz_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
-
+def watts_strogatz_generator(seed, n_min=100, n_max=100, k=4, p=0.25):
     random_state = np.random.RandomState(seed)
     while True:
         if n_min != n_max:

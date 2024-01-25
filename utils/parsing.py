@@ -71,8 +71,8 @@ def add_dataset_args(parser: ArgumentParser):
                         help='Range for the n parameter of generated dataset (usually number of vertices)')
     parser.add_argument('--gen_m', type=int, default=4,
                         help='m parameter of generated dataset (meaning varies)')
-    parser.add_argument('--gen_k', type=int, default=4,
-                        help='k parameter of generated dataset (meaning varies)')
+    parser.add_argument('--gen_k', nargs='+', type=int, default=4, action=required_length(1, 2),
+                        help='Range for the k parameter of generated dataset (meaning varies)')
     parser.add_argument('--gen_p', type=float, default=None,
                         help='p parameter of generated dataset (meaning varies)')
 

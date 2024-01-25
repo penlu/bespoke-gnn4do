@@ -231,20 +231,19 @@ def compile_sat(clauses, signs, N, K):
 def print_sat_data(d):
     print(f"total_vars={d.num_nodes}\nbias_index={d.bias_index}\nbias_weight={d.bias_weight}\nedge_index={d.edge_index}\nedge_weight={d.edge_weight}\nC3_index={d.C3_index}\nC4_index={d.C4_index}")
 
-def random_3sat_generator(seed, n=100, K=400, p=0.5):
-    if isinstance(n, int):
-        N = n
-        n_max = n
-    elif isinstance(n, list) and len(n) == 1:
-        N = n[0]
-        n_max = n[0]
-    elif isinstance(n, list) and len(n) == 2:
-        N, n_max = n
-    else:
-        raise ValueError('random_3sat_generator got bad n (expected int, [n], or [n_min, n_max]: {n}')
-
+def random_3sat_generator(seed, n_min=100, n_max=100, k_min=400, k_max=400, p=0.5):
     random_state = np.random.RandomState(seed)
     while True:
+        if n_min != n_max:
+            N = random_state.randint(n_min, n_max + 1)
+        else:
+            N = n_min
+
+        if k_min != k_max:
+            K = random_state.randint(k_min, k_max + 1)
+        else:
+            K = k_min
+
         # generate A and C for a random 3-SAT instance
         clauses, signs = random_3sat_clauses(random_state, N, K, p)
         total_vars, pair_to_index, data = compile_sat(clauses, signs, N, K)
