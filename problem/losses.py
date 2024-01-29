@@ -10,6 +10,11 @@ from functools import partial
 
 # X should have shape (N, r)
 def max_cut_obj(X, batch):
+    # attach edge weights if they're not already present
+    if not hasattr(batch, 'edge_weight') or batch.edge_weight is None:
+        num_edges = batch.edge_index.shape[1]
+        batch.edge_weight = torch.ones(num_edges, device=X.device)
+
     # compute loss
     X0 = X[batch.edge_index[0]]
     X1 = X[batch.edge_index[1]]
@@ -18,8 +23,10 @@ def max_cut_obj(X, batch):
     return obj
 
 def vertex_cover_obj(X, batch):
-    # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
-    N = X.shape[0]
+    # attach node weights if they're not already present
+    N = batch.num_nodes
+    if not hasattr(batch, 'node_weight') or batch.node_weight is None:
+        batch.node_weight = torch.ones(N, device=X.device)
 
     # lift adopts e1 = (1,0,...,0) as 1
     # count number of vertices: \sum_{i \in [N]} w_i(1+x_i)/2
@@ -27,8 +34,7 @@ def vertex_cover_obj(X, batch):
     return obj
 
 def vertex_cover_constraint(X, batch):
-    # taken from maxcut-80/vertex_cover/graph_utils_vc.py::get_obj_vc_new
-    N = X.shape[0]
+    N = batch.num_nodes
 
     # now calculate penalty for uncovered edges
     # phi is matrix of dimension N by N for error per edge
