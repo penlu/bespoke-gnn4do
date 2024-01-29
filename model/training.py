@@ -39,15 +39,6 @@ def featurize_batch(args, batch):
     else:
         raise ValueError(f"Invalid transform passed into featurize_batch: {args.transform}")
 
-    # attach some weights if they're not already present
-    if not hasattr(batch, 'edge_weight') or batch.edge_weight is None:
-        # TODO XXX need to do this via transform
-        batch.edge_weight = torch.ones(num_edges, device=args.device)
-
-    if not hasattr(batch, 'node_weight') or batch.node_weight is None:
-        # TODO XXX need to do this via transform
-        batch.node_weight = torch.ones(N, device=args.device)
-
     # TODO handling multi-penalty situations -- shouldn't be in featurize
     batch.penalty = args.penalty
 
