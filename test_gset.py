@@ -34,32 +34,33 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
     scores = []
     with torch.no_grad():
         for batch in test_loader:
-            start_time = time.time()
+            for example in batch.to_data_list():
+                start_time = time.time()
 
-            x_in, batch = featurize_batch(args, batch)
-            batch.penalty = 1.
+                x_in, example = featurize_batch(args, example)
 
-            x_out = model(x_in, batch)
-            loss = problem.loss(x_out, batch)
+                x_out = model(x_in, example)
+                loss = problem.loss(x_out, example)
 
-            total_loss += float(loss)
+                total_loss += float(loss)
 
-            x_proj = random_hyperplane_projector(args, x_out, batch, problem.score)
-            end_time = time.time()
+                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
+                end_time = time.time()
 
-            # append times
-            times.append(end_time - start_time)
+                # append times
+                times.append(end_time - start_time)
 
-            # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-            x_proj = torch.where(x_proj == 0, 1, x_proj)
+                # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
+                x_proj = torch.where(x_proj == 0, 1, x_proj)
 
-            num_zeros = (x_proj == 0).count_nonzero()
-            assert num_zeros == 0
+                num_zeros = (x_proj == 0).count_nonzero()
+                assert num_zeros == 0
 
-            # count the score
-            score = problem.score(args, x_proj, batch)
-            scores.append(float(score))
-            total_count += len(batch)
+                # count the score
+                score = problem.score(args, x_proj, example)
+                print(example.name, score / (example.optimal[0] * 2))
+                scores.append(float(score))
+                total_count += 1
 
             if stop_early:
                 return scores, times

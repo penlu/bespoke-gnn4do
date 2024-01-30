@@ -48,7 +48,6 @@ def load_gset(gset_path):
         if len(tokens) == 2 and 'mtx' in tokens[1]:
             counter += 1
             edge_index, edge_weight = load_mtx(gset_path+ '/'+file)
-            print("lengths", len(edge_index[0]), len(edge_weight))
             graphs_and_weights[tokens[0]] = [edge_index, edge_weight]
 
         for token in tokens:
