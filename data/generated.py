@@ -100,34 +100,34 @@ def conditional_rand(random_state, n_min, n_max):
 def erdos_renyi_generator(seed, n_min=100, n_max=100, p_min=0.15, p_max=0.15):
     random_state = np.random.RandomState(seed)
     while True:
-        n = conditional_randint(n_min, n_max)
-        p = conditional_rand(p_min, p_max)
+        n = conditional_randint(random_state, n_min, n_max)
+        p = conditional_rand(random_state, p_min, p_max)
         G = nx.erdos_renyi_graph(n, p, seed=random_state)
         yield from_networkx(G)
 
 def barabasi_albert_generator(seed, n_min=100, n_max=100, m_min=4, m_max=4):
     random_state = np.random.RandomState(seed)
     while True:
-        n = conditional_randint(n_min, n_max)
-        m = conditional_randint(m_min, m_max)
+        n = conditional_randint(random_state, n_min, n_max)
+        m = conditional_randint(random_state, m_min, m_max)
         G = nx.barabasi_albert_graph(n, m, seed=random_state)
         yield from_networkx(G)
 
 def powerlaw_cluster_generator(seed, n_min=100, n_max=100, m_min=4, m_max=4, p_min=0.25, p_max=0.25):
     random_state = np.random.RandomState(seed)
     while True:
-        n = conditional_randint(n_min, n_max)
-        m = conditional_randint(m_min, m_max)
-        p = conditional_rand(p_min, p_max)
+        n = conditional_randint(random_state, n_min, n_max)
+        m = conditional_randint(random_state, m_min, m_max)
+        p = conditional_rand(random_state, p_min, p_max)
         G = nx.powerlaw_cluster_graph(n, m, p, seed=random_state)
         yield from_networkx(G)
 
 def watts_strogatz_generator(seed, n_min=100, n_max=100, k_min=4, k_max=4, p_min=0.25, p_max=0.25):
     random_state = np.random.RandomState(seed)
     while True:
-        n = conditional_randint(n_min, n_max)
-        k = conditional_randint(k_min, k_max)
-        p = conditional_rand(p_min, p_max)
+        n = conditional_randint(random_state, n_min, n_max)
+        k = conditional_randint(random_state, k_min, k_max)
+        p = conditional_rand(random_state, p_min, p_max)
         G = nx.watts_strogatz_graph(n, k, p, seed=random_state)
         yield from_networkx(G)
 
