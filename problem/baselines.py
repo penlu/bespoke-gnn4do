@@ -124,13 +124,13 @@ def e1_projector(args, x_lift, example, score_fn):
     return torch.sign(x_lift[:, 0, None])
 
 # returns a torch.FloatTensor size (N,)
-def random_hyperplane_projector(args, x_lift, batch, score_fn):
+# n_hyperplanes: how many to try?
+# n_groups: we may do it in groups to reduce memory consumption; how many?
+def random_hyperplane_projector(args, x_lift, batch, score_fn, n_hyperplanes=1000, n_groups=1):
     if isinstance(x_lift, np.ndarray):
         x_lift = torch.FloatTensor(x_lift)
 
     #torch.cuda.memory._record_memory_history(enabled=True, trace_alloc_max_entries=100000, trace_alloc_record_context=True)
-    n_hyperplanes = 1000 # TODO make this modifiable in args
-    n_groups = 1 # we may do it in groups to reduce memory consumption
     x_int = []
     scores = []
     for i in range(n_groups):
@@ -165,8 +165,8 @@ def random_hyperplane_projector(args, x_lift, batch, score_fn):
         group_scores = torch.stack(group_scores, dim=1)
         scores.append(group_scores)
 
-    x_int = torch.cat(x_int, dim=0) # now (1000 x nodes_in_batch x 1)
-    scores = torch.cat(scores, dim=0) # now (1000 x graphs_in_batch)
+    x_int = torch.cat(x_int, dim=0) # now (n_hyperplanes x nodes_in_batch x 1)
+    scores = torch.cat(scores, dim=0) # now (n_hyperplanes x graphs_in_batch)
 
     best = torch.argmax(scores, dim=0) # now (graphs_in_batch), best hyperplane index for each graph
 
