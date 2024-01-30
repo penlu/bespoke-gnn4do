@@ -232,6 +232,8 @@ def parse_test_args() -> Namespace:
                         help='use the validation set instead of the test set')
     parser.add_argument('--problem_type', type=str, default="",
                         help='test_problem_type')
+    parser.add_argument('--seed', type=str, default=0,
+                        help='Torch random seed to use to initialize networks')
     add_dataset_args(parser)
     args = parser.parse_args()
 

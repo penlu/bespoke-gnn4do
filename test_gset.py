@@ -71,6 +71,7 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
 if __name__ == '__main__':
     args = parse_test_args()
     print(args)
+    torch.manual_seed(args.seed)
 
     # get data, model
     if args.dataset not in test_datasets:
