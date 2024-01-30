@@ -7,9 +7,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_geometric.utils import to_dense_adj, to_torch_csr_tensor, to_networkx
+from torch_geometric.data import Batch
 import networkx as nx
 import mosek
-
 
 def max_cut_sdp(args, example):
     N = example.num_nodes
@@ -137,18 +137,28 @@ def random_hyperplane_projector(args, x_lift, batch, score_fn):
         hyper = torch.randn((n_hyperplanes // n_groups, x_lift.shape[1]), device=x_lift.device)
         hyper = F.normalize(hyper)
         x_proj = torch.matmul(hyper, x_lift.t())
+
+        # group_x_int[i, j] is the assignment for hyperplane i, variable j
         group_x_int = torch.sign(x_proj)[:, :, None]
         x_int.append(group_x_int)
 
-        # here we score on each component of the batch individually
         group_scores = []
-        # TODO make this compatible with single-example hyperplane rounding
-        for i, example in enumerate(batch.to_data_list()):
-            # TODO need to transfer some characteristics added by featurize_batch
-            # XXX the penalty hack here is not ok under many conditions!
-            example_x_int = group_x_int[:, batch.ptr[i]:batch.ptr[i + 1], :]
-            example.penalty = batch.penalty
-            group_example_scores = torch.vmap(lambda x: score_fn(args, x, example))(example_x_int)
+
+        if isinstance(batch, Batch):
+            # here we score on each component of the batch individually
+            for i, example in enumerate(batch.to_data_list()):
+                # slice out this example's nodes
+                example_x_int = group_x_int[:, batch.ptr[i]:batch.ptr[i + 1], :]
+
+                # XXX the penalty hack here is not ok under many conditions!
+                example.penalty = batch.penalty
+
+                # compute scores for _all_ hyperplanes and _only_ this example
+                group_example_scores = torch.vmap(lambda x: score_fn(args, x, example))(example_x_int)
+                group_scores.append(group_example_scores)
+        else:
+            # we are compatible with single-example hyperplane rounding
+            group_example_scores = torch.vmap(lambda x: score_fn(args, x, batch))(group_x_int)
             group_scores.append(group_example_scores)
 
         # stack these scores to form a (hyperplanes x graphs) tensor
@@ -161,8 +171,11 @@ def random_hyperplane_projector(args, x_lift, batch, score_fn):
     best = torch.argmax(scores, dim=0) # now (graphs_in_batch), best hyperplane index for each graph
 
     out = []
-    for i in range(len(batch)):
-        out.append(x_int[best[i], batch.ptr[i]:batch.ptr[i + 1], 0])
+    if isinstance(batch, Batch):
+        for i in range(len(batch)):
+            out.append(x_int[best[i], batch.ptr[i]:batch.ptr[i + 1], 0])
+    else:
+        out.append(x_int[best[0], :, 0])
     out = torch.cat(out, dim=0)
 
     num_zeros = (out == 0).count_nonzero()
