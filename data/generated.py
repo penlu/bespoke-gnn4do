@@ -12,8 +12,16 @@ from data.sat import random_3sat_generator
 
 # some of our command line arguments can be int, [int], or [int, int]
 # disassemble them into a min and max
-def disassemble_param(n=100):
-    if isinstance(n, int):
+# XXX this possibly should just become the default action
+def disassemble_param(n, default=100):
+    if n is None:
+        if isinstance(default, int):
+            n_min = default
+            n_max = default
+        else:
+            n_min = default[0]
+            n_max = default[1]
+    elif isinstance(n, int):
         n_min = n
         n_max = n
     elif isinstance(n, list) and len(n) == 1:
@@ -26,75 +34,100 @@ def disassemble_param(n=100):
 
     return n_min, n_max
 
+def format_param(n_min, n_max):
+    if n_min == n_max:
+        return str(n_min)
+    else:
+        return str(n_min) + ',' + str(n_max)
+
 # a generator is a function that takes a seed and produces an iterator
 def construct_generator(args):
-    n_min, n_max = disassemble_param(n=args.gen_n)
-    k_min, k_max = disassemble_param(n=args.gen_k)
-
     if args.dataset == 'ErdosRenyi':
-        gen_p = 0.15 if args.gen_p == None else args.gen_p
-        generator = lambda seed: erdos_renyi_generator(seed, n_min, n_max, p=gen_p)
-        name = f'erdos_renyi_n{args.gen_n}_p{gen_p}'
+        n_min, n_max = disassemble_param(args.gen_n, default=100)
+        p_min, p_max = disassemble_param(args.gen_p, default=0.15)
+        generator = lambda seed: erdos_renyi_generator(seed, n_min, n_max, p_min, p_max)
+        name = f'erdos_renyi_n{format_param(n_min, n_max)}_p{format_param(p_min, p_max)}'
     elif args.dataset == 'BarabasiAlbert':
-        generator = lambda seed: barabasi_albert_generator(seed, n_min, n_max, m=args.gen_m)
-        name = f'barabasi_albert_n{args.gen_n}_m{args.gen_m}'
+        n_min, n_max = disassemble_param(args.gen_n, default=100)
+        m_min, m_max = disassemble_param(args.gen_m, default=4)
+        generator = lambda seed: barabasi_albert_generator(seed, n_min, n_max, m_min, m_max)
+        name = f'barabasi_albert_n{format_param(n_min, n_max)}_m{format_param(m_min, m_max)}'
     elif args.dataset == 'PowerlawCluster':
-        gen_p = 0.25 if args.gen_p == None else args.gen_p
-        generator = lambda seed: powerlaw_cluster_generator(seed, n_min, n_max, m=args.gen_m, p=gen_p)
-        name = f'powerlaw_cluster_n{args.gen_n}_m{args.gen_m}_p{gen_p}'
+        n_min, n_max = disassemble_param(args.gen_n, default=100)
+        m_min, m_max = disassemble_param(args.gen_m, default=4)
+        p_min, p_max = disassemble_param(args.gen_p, default=0.25)
+        generator = lambda seed: powerlaw_cluster_generator(seed, n_min, n_max, m_min, m_max, p_min, p_max)
+        name = f'powerlaw_cluster_n{format_param(n_min, n_max)}_m{format_param(m_min, m_max)}_p{format_param(p_min, p_max)}'
     elif args.dataset == 'WattsStrogatz':
-        gen_p = 0.25 if args.gen_p == None else args.gen_p
-        generator = lambda seed: watts_strogatz_generator(seed, n_min, n_max, k=k_min, p=gen_p)
-        name = f'watts_strogatz_n{args.gen_n}_k{k_min}_p{gen_p}'
+        n_min, n_max = disassemble_param(args.gen_n, default=100)
+        k_min, k_max = disassemble_param(args.gen_k, default=4)
+        p_min, p_max = disassemble_param(args.gen_p, default=0.25)
+        generator = lambda seed: watts_strogatz_generator(seed, n_min, n_max, k_min, k_max, p_min, p_max)
+        name = f'watts_strogatz_n{format_param(n_min, n_max)}_k{format_param(k_min, k_max)}_p{format_param(p_min, p_max)}'
     elif args.dataset == 'ForcedRB':
-        generator = lambda seed: forced_rb_generator(seed, n=args.RB_n, k=args.RB_k)
-        name = f'forced_rb_n{args.RB_n}_k{args.RB_k}'
+        n_min, n_max = disassemble_param(args.gen_n, default=(10, 26))
+        k_min, k_max = disassemble_param(args.gen_k, default=(5, 21))
+        p_min, p_max = disassemble_param(args.gen_p, default=(0.3, 1.0))
+        generator = lambda seed: forced_rb_generator(seed, n_min, n_max, k_min, k_max, p_min, p_max)
+        name = f'forced_rb_n{format_param(n_min, n_max)}_k{format_param(k_min, k_max)}'
     elif args.dataset == 'random-sat':
-        gen_p = 0.5 if args.gen_p == None else args.gen_p
-        generator = lambda seed: random_3sat_generator(seed, n_min, n_max, k_min, k_max, p=gen_p)
-        name = f'sat_n{args.gen_n}_k{args.gen_k}_p{gen_p}'
+        n_min, n_max = disassemble_param(args.gen_n, default=100)
+        k_min, k_max = disassemble_param(args.gen_k, default=400)
+        p_min, p_max = disassemble_param(args.gen_p, default=0.5)
+        generator = lambda seed: random_3sat_generator(seed, n_min, n_max, k_min, k_max, p_min, p_max)
+        name = f'sat_n{format_param(n_min, n_max)}_k{format_param(k_min, k_max)}_p{format_param(p_min, p_max)}'
     else:
         raise ValueError('Got a bad generated dataset: {args.dataset}')
 
     return generator, name
 
-def erdos_renyi_generator(seed, n_min=100, n_max=100, p=0.15):
+# invoke RNG to generate random int only when a non-empty range is supplied
+def conditional_randint(random_state, n_min, n_max):
+    if n_min != n_max:
+        n = random_state.randint(n_min, n_max + 1)
+    else:
+        n = n_min
+    return n
+
+# invoke RNG to generate random float only when a non-empty range is supplied
+def conditional_rand(random_state, n_min, n_max):
+    if n_min != n_max:
+        n = random_state.uniform(n_min, n_max)
+    else:
+        n = n_min
+    return n
+
+def erdos_renyi_generator(seed, n_min=100, n_max=100, p_min=0.15, p_max=0.15):
     random_state = np.random.RandomState(seed)
     while True:
-        if n_min != n_max:
-            n = random_state.randint(n_min, n_max + 1)
-        else:
-            n = n_min
+        n = conditional_randint(n_min, n_max)
+        p = conditional_rand(p_min, p_max)
         G = nx.erdos_renyi_graph(n, p, seed=random_state)
         yield from_networkx(G)
 
-def barabasi_albert_generator(seed, n_min=100, n_max=100, m=4):
+def barabasi_albert_generator(seed, n_min=100, n_max=100, m_min=4, m_max=4):
     random_state = np.random.RandomState(seed)
     while True:
-        if n_min != n_max:
-            n = random_state.randint(n_min, n_max + 1)
-        else:
-            n = n_min
+        n = conditional_randint(n_min, n_max)
+        m = conditional_randint(m_min, m_max)
         G = nx.barabasi_albert_graph(n, m, seed=random_state)
         yield from_networkx(G)
 
-def powerlaw_cluster_generator(seed, n_min=100, n_max=100, m=4, p=0.25):
+def powerlaw_cluster_generator(seed, n_min=100, n_max=100, m_min=4, m_max=4, p_min=0.25, p_max=0.25):
     random_state = np.random.RandomState(seed)
     while True:
-        if n_min != n_max:
-            n = random_state.randint(n_min, n_max + 1)
-        else:
-            n = n_min
+        n = conditional_randint(n_min, n_max)
+        m = conditional_randint(m_min, m_max)
+        p = conditional_rand(p_min, p_max)
         G = nx.powerlaw_cluster_graph(n, m, p, seed=random_state)
         yield from_networkx(G)
 
-def watts_strogatz_generator(seed, n_min=100, n_max=100, k=4, p=0.25):
+def watts_strogatz_generator(seed, n_min=100, n_max=100, k_min=4, k_max=4, p_min=0.25, p_max=0.25):
     random_state = np.random.RandomState(seed)
     while True:
-        if n_min != n_max:
-            n = random_state.randint(n_min, n_max + 1)
-        else:
-            n = n_min
+        n = conditional_randint(n_min, n_max)
+        k = conditional_randint(k_min, k_max)
+        p = conditional_rand(p_min, p_max)
         G = nx.watts_strogatz_graph(n, k, p, seed=random_state)
         yield from_networkx(G)
 

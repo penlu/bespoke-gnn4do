@@ -67,20 +67,14 @@ def add_dataset_args(parser: ArgumentParser):
                         help='When using generated datasets, do infinite generation?')
 
     # Some generated dataset parameters
-    parser.add_argument('--gen_n', nargs='+', type=int, default=100, action=required_length(1, 2),
+    parser.add_argument('--gen_n', nargs='+', type=int, default=None, action=required_length(1, 2),
                         help='Range for the n parameter of generated dataset (usually number of vertices)')
-    parser.add_argument('--gen_m', type=int, default=4,
+    parser.add_argument('--gen_m', nargs='+', type=int, default=None, action=required_length(1, 2),
                         help='m parameter of generated dataset (meaning varies)')
-    parser.add_argument('--gen_k', nargs='+', type=int, default=4, action=required_length(1, 2),
+    parser.add_argument('--gen_k', nargs='+', type=int, default=None, action=required_length(1, 2),
                         help='Range for the k parameter of generated dataset (meaning varies)')
-    parser.add_argument('--gen_p', type=float, default=None,
+    parser.add_argument('--gen_p', nargs='+', type=float, default=None, action=required_length(1, 2),
                         help='p parameter of generated dataset (meaning varies)')
-
-    # Arguments for ForcedRB graphs
-    parser.add_argument('--RB_n', nargs=2, type=int, default=[10, 26],
-                        help='For ForcedRB, how many disjoint cliques? This upper bounds maximum independent set size. Provide two numbers for range [a, b).')
-    parser.add_argument('--RB_k', nargs=2, type=int, default=[5, 21],
-                        help='For ForcedRB, how many nodes in each disjoint clique? Provide two numbers for range [a, b).')
 
     # Arguments for chordal graphs
     # TODO

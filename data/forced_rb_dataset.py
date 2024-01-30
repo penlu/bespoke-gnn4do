@@ -15,11 +15,11 @@ from torch_geometric.utils.convert import from_networkx
 #5) The is_forced argument enforces the size of the maximum independent set to be n. This can slow down the generation process slightly.
 #To force the independent set to be exactly n we can create a set of nodes that contains exactly one node from each disjoint clique, and then ensure that no edge gets sampled between them.
 
-def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 21], is_forced=True):
+def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 21], p_range=[0.3, 1.0], is_forced=True):
     n = generator.integers(n_range[0], n_range[1]) #number of disjoint cliques (and upper bound on max independent set), feel free to change the ranges depending on comp budget or other considerations
     k = generator.integers(k_range[0], k_range[1])  #number of nodes on each disjoint clique, feel free to change as well
 
-    p = generator.uniform(0.3, 1.0) #determines how dense the sampling will be
+    p = generator.uniform(p_range[0], p_range[1]) #determines how dense the sampling will be
     a = np.log(k) / np.log(n) #parameter that determines how many edges we sample
     r = - a / np.log(1 - p)
     v = k * n #total number of nodes in the graph
@@ -58,8 +58,8 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
     G = G.to_undirected()
     return G
 
-def forced_rb_generator(seed, n=[10, 26], k=[5, 21]):
+def forced_rb_generator(seed, n_min, n_max, k_min, k_max, p_min, p_max):
     generator = np.random.default_rng(seed)
     while True:
-        G = RB_model(generator=generator, n_range=n, k_range=k)
+        G = RB_model(generator=generator, n_range=[n_min, n_max], k_range=[k_min, k_max], p_range=[p_min, p_max])
         yield from_networkx(G)
