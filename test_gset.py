@@ -16,6 +16,7 @@ from problem.baselines import random_hyperplane_projector
 from model.training import featurize_batch
 import time
 from problem.problems import get_problem
+import math
 
 from data.gset import load_gset
 
@@ -32,38 +33,56 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
     total_count = 0    
     times = []
     scores = []
+
+    misses_by_size = {
+      800: [],
+      1000: [],
+      2000: [],
+      3000: [],
+    }
     with torch.no_grad():
         for batch in test_loader:
             for example in batch.to_data_list():
                 start_time = time.time()
 
-                x_in, example = featurize_batch(args, example)
+                score = -math.inf
+                for attempt in range(100):
+                    x_in, example = featurize_batch(args, example)
 
-                x_out = model(x_in, example)
-                loss = problem.loss(x_out, example)
+                    x_out = model(x_in, example)
+                    loss = problem.loss(x_out, example)
 
-                total_loss += float(loss)
+                    total_loss += float(loss)
 
-                x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
+                    x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
+
+                    # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
+                    x_proj = torch.where(x_proj == 0, 1, x_proj)
+
+                    num_zeros = (x_proj == 0).count_nonzero()
+                    assert num_zeros == 0
+
+                    # count the score
+                    score = max(problem.score(args, x_proj, example), score)
+
                 end_time = time.time()
 
                 # append times
                 times.append(end_time - start_time)
 
-                # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-                x_proj = torch.where(x_proj == 0, 1, x_proj)
+                if stop_early:
+                    return scores, times
 
-                num_zeros = (x_proj == 0).count_nonzero()
-                assert num_zeros == 0
-
-                # count the score
-                score = problem.score(args, x_proj, example)
-                print(example.name, score / (example.optimal[0] * 2))
+                print(example.name, example.num_nodes, example.optimal[0] - score / 2.)
+                misses_by_size[min(example.num_nodes, 3000)].append(example.optimal[0] - score / 2.)
                 scores.append(float(score))
                 total_count += 1
 
-            if stop_early:
-                return scores, times
+    print('800:', sum(misses_by_size[800]) / len(misses_by_size[800]))
+    print('1000:', sum(misses_by_size[1000]) / len(misses_by_size[1000]))
+    print('2000:', sum(misses_by_size[2000]) / len(misses_by_size[2000]))
+    print('3000+:', sum(misses_by_size[3000]) / len(misses_by_size[3000]))
+    print(misses_by_size)
 
     return scores, times
 
