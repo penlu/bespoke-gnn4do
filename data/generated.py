@@ -15,7 +15,7 @@ from data.sat import random_3sat_generator
 # XXX this possibly should just become the default action
 def disassemble_param(n, default=100):
     if n is None:
-        if isinstance(default, int):
+        if isinstance(default, int) or isinstance(default, float):
             n_min = default
             n_max = default
         else:
