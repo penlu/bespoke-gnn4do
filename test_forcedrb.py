@@ -16,6 +16,7 @@ from problem.baselines import random_hyperplane_projector
 from model.training import featurize_batch
 import time
 from problem.problems import get_problem
+import math
 
 from data.gset import load_gset
 
@@ -32,39 +33,43 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
     total_count = 0    
     times = []
     scores = []
+    ratios = []
     with torch.no_grad():
         for batch in test_loader:
-            start_time = time.time()
+            for example in batch.to_data_list():
+                start_time = time.time()
 
-            x_in, batch = featurize_batch(args, batch)
-            batch.penalty = 1.
+                score = -math.inf
+                for attempt in range(100):
+                    x_in, example = featurize_batch(args, example)
 
-            x_out = model(x_in, batch)
-            loss = problem.loss(x_out, batch)
+                    x_out = model(x_in, example)
+                    loss = problem.loss(x_out, example)
 
-            total_loss += float(loss)
+                    total_loss += float(loss)
 
-            x_proj = random_hyperplane_projector(args, x_out, batch, problem.score)
-            end_time = time.time()
+                    x_proj = random_hyperplane_projector(args, x_out, example, problem.score)
 
-            # append times
-            times.append(end_time - start_time)
+                    # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
+                    x_proj = torch.where(x_proj == 0, 1, x_proj)
 
-            # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-            x_proj = torch.where(x_proj == 0, 1, x_proj)
+                    num_zeros = (x_proj == 0).count_nonzero()
+                    assert num_zeros == 0
 
-            num_zeros = (x_proj == 0).count_nonzero()
-            assert num_zeros == 0
+                    # count the score
+                    score = max(problem.score(args, x_proj, example), score)
 
-            # count the score
-            score = problem.score(args, x_proj, batch)
-            scores.append(float(score))
-            total_count += len(batch)
+                end_time = time.time()
 
-            if stop_early:
-                return scores, times
+                scores.append(float(score))
+                ratios.append(-float(score) / (example.num_nodes - example.optimal))
+                print(example.num_nodes, example.num_nodes - example.optimal, -float(score), ratios[-1])
+                total_count += 1
 
-    return scores, times
+                if stop_early:
+                    return scores, times
+
+    return scores, ratios, times
 
 
 if __name__ == '__main__':
@@ -91,9 +96,11 @@ if __name__ == '__main__':
     # call test model
     predictions = time_and_scores(args, model, test_loader, problem, stop_early=True) # to initialize CUDA
     predictions = time_and_scores(args, model, test_loader, problem)
-    scores, times = predictions
+    scores, ratios, times = predictions
     print(f'score mean: {sum(scores) / len(scores)}')
     print(f'score variance: {np.var(scores)}')
+    print(f'ratio mean: {sum(ratios) / len(ratios)}')
+    print(f'ratio variance: {math.sqrt(np.var(ratios))}')
 
     # TODO: fix output file?
     np.save(os.path.join(args.model_folder, f'{args.test_prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))

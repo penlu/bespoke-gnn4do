@@ -56,10 +56,12 @@ def RB_model(generator=np.random.default_rng(0), n_range=[10, 26], k_range=[5, 2
     G = nx.Graph()
     G.add_edges_from(list(total_edges))
     G = G.to_undirected()
-    return G
+    return G, n
 
 def forced_rb_generator(seed, n_min, n_max, k_min, k_max, p_min, p_max):
     generator = np.random.default_rng(seed)
     while True:
-        G = RB_model(generator=generator, n_range=[n_min, n_max], k_range=[k_min, k_max], p_range=[p_min, p_max])
-        yield from_networkx(G)
+        G, n = RB_model(generator=generator, n_range=[n_min, n_max], k_range=[k_min, k_max], p_range=[p_min, p_max])
+        data = from_networkx(G)
+        data.optimal = n
+        yield data
