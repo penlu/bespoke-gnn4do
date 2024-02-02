@@ -36,32 +36,40 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
         for batch in test_loader:
             start_time = time.time()
 
-            x_in, batch = featurize_batch(args, batch)
+            x_projs = []
+            for attempt in range(10):
+                x_in, batch = featurize_batch(args, batch)
 
-            x_out = model(x_in, batch)
-            loss = problem.loss(x_out, batch)
+                x_out = model(x_in, batch)
+                loss = problem.loss(x_out, batch)
 
-            total_loss += float(loss)
+                total_loss += float(loss)
 
-            x_proj = random_hyperplane_projector(args, x_out, batch, problem.score)
+                x_proj = random_hyperplane_projector(args, x_out, batch, problem.score)
+
+                # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
+                x_proj = torch.where(x_proj == 0, 1, x_proj)
+                num_zeros = (x_proj == 0).count_nonzero()
+                assert num_zeros == 0
+
+                x_projs.append(x_proj)
+
             end_time = time.time()
 
             # append times
             times.append(end_time - start_time)
 
-            # ENSURE we are getting a +/- 1 vector out by replacing 0 with 1
-            x_proj = torch.where(x_proj == 0, 1, x_proj)
-
-            num_zeros = (x_proj == 0).count_nonzero()
-            assert num_zeros == 0
-
             # count the score
             for i in range(len(batch)):
-                example_x_proj = x_proj[batch.ptr[i]:batch.ptr[i + 1]]
-                example = batch.get_example(i)
-                example.penalty = args.penalty
-                score = problem.score(args, example_x_proj, example)
-                scores.append(float(score))
+                attempt_scores = []
+                for attempt in range(10):
+                    example_x_proj = x_projs[attempt][batch.ptr[i]:batch.ptr[i + 1]]
+                    example = batch.get_example(i)
+                    example.penalty = args.penalty
+                    score = problem.score(args, example_x_proj, example)
+                    attempt_scores.append(float(score))
+                print(max(attempt_scores))
+                scores.append(max(attempt_scores))
 
             total_count += len(batch)
 
