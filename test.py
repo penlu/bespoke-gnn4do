@@ -37,7 +37,6 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
             start_time = time.time()
 
             x_in, batch = featurize_batch(args, batch)
-            batch.penalty = 1.
 
             x_out = model(x_in, batch)
             loss = problem.loss(x_out, batch)
@@ -57,15 +56,19 @@ def time_and_scores(args, model, test_loader, problem, stop_early=False):
             assert num_zeros == 0
 
             # count the score
-            score = problem.score(args, x_proj, batch)
-            scores.append(float(score))
+            for i in range(len(batch)):
+                example_x_proj = x_proj[batch.ptr[i]:batch.ptr[i + 1]]
+                example = batch.get_example(i)
+                example.penalty = args.penalty
+                score = problem.score(args, example_x_proj, example)
+                scores.append(float(score))
+
             total_count += len(batch)
 
             if stop_early:
                 return scores, times
 
     return scores, times
-
 
 if __name__ == '__main__':
     args = parse_test_args()
@@ -94,6 +97,7 @@ if __name__ == '__main__':
     scores, times = predictions
     print(f'score mean: {sum(scores) / len(scores)}')
     print(f'score variance: {np.var(scores)}')
+    print(f'total time: {sum(times)}')
 
     # TODO: fix output file?
     np.save(os.path.join(args.model_folder, f'{args.test_prefix}@@test_results_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.npy'), np.array(predictions))
