@@ -8,8 +8,8 @@ from torch.optim import Adam
 import time
 
 import sys
-sys.path.append('/home/gridsan/myau/bespoke-gnn4do/problem')
-sys.path.append('/home/gridsan/myau/bespoke-gnn4do')
+sys.path.append('/home/user/repo/problem')
+sys.path.append('/home/user/repo')
     
 #from baselines import random_hyperplane_projector
 #from problem.problems import SATProblem
