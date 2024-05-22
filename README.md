@@ -89,7 +89,7 @@ We support the generated datasets:
 
 ```
 $ python train.py --help
-usage: train.py [-h] [--problem_type {max_cut,vertex_cover,max_clique,sat}] [--seed SEED] [--prefix PREFIX] [--model_type {LiftMP,FullMP,GIN,GAT,GCNN,GatedGCNN,NegationGAT,ProjectMP,Nikos}] [--num_layers NUM_LAYERS]
+usage: train.py [-h] [--problem_type {max_cut,vertex_cover,max_clique,sat}] [--seed SEED] [--prefix PREFIX] [--model_type {LiftMP,FullMP,GIN,GAT,GCNN,GatedGCNN,NegationGAT,ProjectMP}] [--num_layers NUM_LAYERS]
                 [--repeat_lift_layers REPEAT_LIFT_LAYERS [REPEAT_LIFT_LAYERS ...]] [--num_layers_project NUM_LAYERS_PROJECT] [--rank RANK] [--dropout DROPOUT] [--hidden_channels HIDDEN_CHANNELS] [--norm NORM] [--heads HEADS]
                 [--finetune_from FINETUNE_FROM] [--lift_file LIFT_FILE] [--lr LR] [--batch_size BATCH_SIZE] [--valid_freq VALID_FREQ] [--save_freq SAVE_FREQ] [--penalty PENALTY] [--stepwise STEPWISE] [--steps STEPS] [--epochs EPOCHS]
                 [--train_fraction TRAIN_FRACTION]
@@ -103,7 +103,7 @@ options:
                         What problem are we doing?
   --seed SEED           Torch random seed to use to initialize networks
   --prefix PREFIX       Folder name for run outputs if desired (will default to run timestamp)
-  --model_type {LiftMP,FullMP,GIN,GAT,GCNN,GatedGCNN,NegationGAT,ProjectMP,Nikos}
+  --model_type {LiftMP,FullMP,GIN,GAT,GCNN,GatedGCNN,NegationGAT,ProjectMP}
                         Which type of model to use
   --num_layers NUM_LAYERS
                         How many layers?

@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 from torch_geometric.utils.convert import from_networkx
 
-# Adapted from Nikos's Forced_RB.ipynb
+# Adapted from XXXXX
 
 ## RB MODEL for hard independent set instances: 
 #1) Create n disjoint cliques

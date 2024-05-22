@@ -61,13 +61,6 @@ def construct_model(args):
                             dropout=args.dropout, 
                             v2=True, norm=args.norm, 
                             num_layers=args.num_layers)
-    elif args.model_type == 'Nikos':
-        model = LiftProjectNetwork_Nikos(
-          grad_layer=construct_grad_layer(args),
-          in_channels=args.rank,
-          num_layers_lift=args.num_layers - args.num_layers_project,
-          num_layers_project=args.num_layers_project,
-        )
     else:
         raise ValueError(f'Got unexpected model_type {args.model_type}')
 
@@ -281,14 +274,3 @@ class ProjectNetwork_r1(torch.nn.Module):
             x = F.leaky_relu(l(x, batch)+x,0.01)
         x = F.normalize(x)
         return x
-
-class LiftProjectNetwork_Nikos(torch.nn.Module):
-    def __init__(self, in_channels, num_layers_lift, num_layers_project, grad_layer, lift_file=None):
-        super().__init__()
-        self.lift_net = LiftNetwork(grad_layer, in_channels, num_layers=num_layers_lift)
-        self.project_net = ProjectNetwork_r1(grad_layer, in_channels, num_layers=num_layers_project)
-
-    def forward(self, x, batch):
-        out = self.lift_net(x, batch)
-        outs = self.project_net(out, batch)
-        return outs

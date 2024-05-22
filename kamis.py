@@ -14,8 +14,8 @@ from utils.baselines import random_hyperplane_projector
 from model.training import featurize_batch
 import time
 
-rootfolder = '/home/penlu/code/bespoke-gnn4do'
-the_path = '/home/penlu/code/bespoke-gnn4do/training_runs/230928_runs/230925_generated_liftMP_VC'
+rootfolder = '/home/user/repo'
+the_path = '/home/user/repo/training_runs/230928_runs/230925_generated_liftMP_VC'
 
 def get_validation_score(model_folder):
     # train-time validation scores

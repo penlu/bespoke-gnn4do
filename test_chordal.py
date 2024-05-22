@@ -21,7 +21,7 @@ import math
 from torch_geometric.utils.convert import from_networkx
 
 '''
-python test.py --model_folder="/home/bcjexu/maxcut-80/bespoke-gnn4do/training_runs/230928_runs/230925_generated_liftMP_cut/paramhash:5ec32a71d1ff22fe501f860a672a8357b01df6f08a3406ab1ae315f0ed36b69a/" \
+python test.py --model_folder="/home/user/repo/training_runs/230928_runs/230925_generated_liftMP_cut/paramhash:5ec32a71d1ff22fe501f860a672a8357b01df6f08a3406ab1ae315f0ed36b69a/" \
     --model_file=best_model.pt --test_prefix=240106_TEST --problem_type=max_cut
 
 Will load the dataset and parameters from the params in the model folder.

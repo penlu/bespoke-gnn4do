@@ -26,7 +26,7 @@ class ListDataset(Dataset):
         return len(self.data)
 
 def construct_kamis_dataset(args, pre_transform=None, transform=None):
-    pickled_data = pickle.load(open('/home/penlu/code/bespoke-gnn4do/graphs_and_results.pickle', 'rb'))
+    pickled_data = pickle.load(open('/home/user/repo/graphs_and_results.pickle', 'rb'))
     #dataset_names = ['er', 'ba', 'hk', 'ws']
     #for ds in dataset_names:
     #    datapoints = [y[0] for y in pickled_data[ds].values()]

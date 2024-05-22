@@ -6,7 +6,6 @@ import time
 # TODO perhaps want to just be working with networkx graphs
 def gen_graph(N=100, p=0.15, device=torch.device("cpu"), **kwargs):
     ''' Generates a random graph
-        TODO(penlu,morrisy): doublecheck definitions
         N: number of vertices
         p: edge probability
 

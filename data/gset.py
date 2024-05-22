@@ -1,4 +1,4 @@
-# Adapted from read_gset.ipynb by Nikos
+# Adapted from read_gset.ipynb by XXXXX
 import os
 from os import listdir
 from os.path import isfile, join
